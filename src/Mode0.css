@@ -1,0 +1,24 @@
+/* Mode0.css */
+
+.mode0-container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  
+  .mode0-header {
+    /* Tailwind classes are used; additional styles can be added here if needed */
+  }
+  
+  .points-container {
+    /* Tailwind classes are used */
+  }
+  
+  .mode0-header-right {
+    /* Tailwind classes are used */
+  }
+  
+  .mode0-carousels {
+    /* Tailwind classes are used */
+  }
+  

@@ -1,4 +1,7 @@
 @import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /* Plugins */
 @plugin '@tailwindcss/forms';
@@ -25,4 +28,8 @@
       transform: rotate(-360deg);
     }
   }
+}
+
+:root {
+  background-color: #0f172a;
 }
