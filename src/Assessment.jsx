@@ -47,12 +47,17 @@ export default function Assessment() {
 
   /**
    * When a section is clicked, set it as selected,
-   * and make a copy of it for editing.
+   * and make a deep copy of it for editing.
    */
   const handleSectionClick = (section) => {
     setSelectedSection(section);
-    // Make a deep copy of the section so we can edit safely
-    setEditingSection(JSON.parse(JSON.stringify(section)));
+    // Ensure beginningText and endingText exist on the section object
+    const sectionWithExtras = {
+      beginningText: "",
+      endingText: "",
+      ...section,
+    };
+    setEditingSection(JSON.parse(JSON.stringify(sectionWithExtras)));
   };
 
   /**
@@ -62,6 +67,26 @@ export default function Assessment() {
     setEditingSection((prev) => ({
       ...prev,
       title: newTitle,
+    }));
+  };
+
+  /**
+   * Handle changes to the section's beginning text.
+   */
+  const handleBeginningTextChange = (newText) => {
+    setEditingSection((prev) => ({
+      ...prev,
+      beginningText: newText,
+    }));
+  };
+
+  /**
+   * Handle changes to the section's ending text.
+   */
+  const handleEndingTextChange = (newText) => {
+    setEditingSection((prev) => ({
+      ...prev,
+      endingText: newText,
     }));
   };
 
@@ -201,10 +226,12 @@ export default function Assessment() {
       // Reference the document in Firestore
       const docRef = doc(db, "BHC_Assessment", editingSection.id);
 
-      // Update the Firestore doc with the new data
+      // Update the Firestore doc with the new data including beginningText and endingText
       await updateDoc(docRef, {
         title: editingSection.title,
         order: editingSection.order || 0,
+        beginningText: editingSection.beginningText || "",
+        endingText: editingSection.endingText || "",
         questions: editingSection.questions,
       });
 
@@ -226,7 +253,7 @@ export default function Assessment() {
   };
 
   return (
-    <>
+    <div className="overflow-x-hidden">
       {/* Mobile Toggle for Side Content */}
       <div className="w-full bg-gray-50 p-4 lg:hidden lg:p-8 dark:bg-gray-800/25">
         <button
@@ -239,14 +266,13 @@ export default function Assessment() {
       </div>
 
       {/* Layout: Left (Side) and Right (Main) Content */}
-      <div className="flex max-w-full flex-auto flex-col lg:flex-row">
-        {/* Left Side Content: Scrollable view with section cards */}
+      <div className="flex flex-col lg:flex-row">
+        {/* Left Side Content */}
         <div
           className={`w-full flex-none p-4 lg:w-80 lg:p-8 xl:w-96 dark:bg-gray-800/25 ${
             mobileSideContentOpen ? "" : "hidden"
           } lg:block`}
         >
-          {/* Top Bar with "Sections" title and "Add Section" button */}
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold text-gray-100">Sections</h2>
             <button
@@ -256,7 +282,6 @@ export default function Assessment() {
               Add Section
             </button>
           </div>
-
           <div className="overflow-y-auto max-h-[calc(100vh-200px)]">
             {sections.length > 0 ? (
               sections.map((section) => (
@@ -283,8 +308,8 @@ export default function Assessment() {
           </div>
         </div>
 
-        {/* Main Content: Editing the selected section */}
-        <div className="mx-auto flex w-full max-w-10xl grow flex-col p-4 lg:p-8">
+        {/* Main Content */}
+        <div className="mx-auto flex w-full max-w-screen-xl grow flex-col p-4 lg:p-8 min-w-0">
           {selectedSection ? (
             editingSection ? (
               <div>
@@ -302,6 +327,40 @@ export default function Assessment() {
                     className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800"
                     value={editingSection.title || ""}
                     onChange={(e) => handleSectionTitleChange(e.target.value)}
+                  />
+                </div>
+
+                {/* Edit the beginning text */}
+                <div className="mb-4">
+                  <label
+                    className="block text-gray-100 font-bold mb-2"
+                    htmlFor="beginningText"
+                  >
+                    Beginning Text
+                  </label>
+                  <input
+                    id="beginningText"
+                    type="text"
+                    className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800"
+                    value={editingSection.beginningText || ""}
+                    onChange={(e) => handleBeginningTextChange(e.target.value)}
+                  />
+                </div>
+
+                {/* Edit the ending text */}
+                <div className="mb-4">
+                  <label
+                    className="block text-gray-100 font-bold mb-2"
+                    htmlFor="endingText"
+                  >
+                    Ending Text
+                  </label>
+                  <input
+                    id="endingText"
+                    type="text"
+                    className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800"
+                    value={editingSection.endingText || ""}
+                    onChange={(e) => handleEndingTextChange(e.target.value)}
                   />
                 </div>
 
@@ -352,7 +411,9 @@ export default function Assessment() {
                         <input
                           type="text"
                           value={question.text}
-                          onChange={(e) => handleQuestionTextChange(qIndex, e.target.value)}
+                          onChange={(e) =>
+                            handleQuestionTextChange(qIndex, e.target.value)
+                          }
                           className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800 mb-3"
                         />
 
@@ -362,7 +423,9 @@ export default function Assessment() {
                         </label>
                         <select
                           value={question.type}
-                          onChange={(e) => handleQuestionTypeChange(qIndex, e.target.value)}
+                          onChange={(e) =>
+                            handleQuestionTypeChange(qIndex, e.target.value)
+                          }
                           className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800 mb-3"
                         >
                           <option value="multipleChoice">multipleChoice</option>
@@ -372,51 +435,68 @@ export default function Assessment() {
                         </select>
 
                         {/* Options: Only for multipleChoice or multipleSelect */}
-                        {(question.type === "multipleChoice" || question.type === "multipleSelect") && (
+                        {(question.type === "multipleChoice" ||
+                          question.type === "multipleSelect") && (
                           <>
-                            {Array.isArray(question.options) && question.options.length > 0 && (
-                              <div className="mt-3">
-                                <p className="font-semibold text-gray-800 dark:text-gray-100">
-                                  Options:
-                                </p>
-                                {question.options.map((option, oIndex) => (
-                                  <div key={oIndex} className="mt-2 pl-4 border-l border-gray-400">
-                                    {/* Option Label */}
-                                    <label className="block text-sm text-gray-800 dark:text-gray-100">
-                                      Label:
-                                    </label>
-                                    <input
-                                      type="text"
-                                      value={option.label}
-                                      onChange={(e) =>
-                                        handleOptionChange(qIndex, oIndex, "label", e.target.value)
-                                      }
-                                      className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800 mb-2"
-                                    />
-
-                                    {/* Option Weight */}
-                                    <label className="block text-sm text-gray-800 dark:text-gray-100">
-                                      Weight:
-                                    </label>
-                                    <input
-                                      type="number"
-                                      value={option.weight ?? ""}
-                                      onChange={(e) =>
-                                        handleOptionChange(qIndex, oIndex, "weight", e.target.value)
-                                      }
-                                      className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800"
-                                    />
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDeleteOption(qIndex, oIndex)}
-                                      className="mt-1 text-red-600 hover:text-red-900 text-sm"
+                            {Array.isArray(question.options) &&
+                              question.options.length > 0 && (
+                                <div className="mt-3">
+                                  <p className="font-semibold text-gray-800 dark:text-gray-100">
+                                    Options:
+                                  </p>
+                                  {question.options.map((option, oIndex) => (
+                                    <div
+                                      key={oIndex}
+                                      className="mt-2 pl-4 border-l border-gray-400"
                                     >
-                                      Delete Option
-                                    </button>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
+                                      {/* Option Label */}
+                                      <label className="block text-sm text-gray-800 dark:text-gray-100">
+                                        Label:
+                                      </label>
+                                      <input
+                                        type="text"
+                                        value={option.label}
+                                        onChange={(e) =>
+                                          handleOptionChange(
+                                            qIndex,
+                                            oIndex,
+                                            "label",
+                                            e.target.value
+                                          )
+                                        }
+                                        className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800 mb-2"
+                                      />
+
+                                      {/* Option Weight */}
+                                      <label className="block text-sm text-gray-800 dark:text-gray-100">
+                                        Weight:
+                                      </label>
+                                      <input
+                                        type="number"
+                                        value={option.weight ?? ""}
+                                        onChange={(e) =>
+                                          handleOptionChange(
+                                            qIndex,
+                                            oIndex,
+                                            "weight",
+                                            e.target.value
+                                          )
+                                        }
+                                        className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800"
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          handleDeleteOption(qIndex, oIndex)
+                                        }
+                                        className="mt-1 text-red-600 hover:text-red-900 text-sm"
+                                      >
+                                        Delete Option
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                             <button
                               type="button"
                               onClick={() => handleAddOption(qIndex)}
@@ -459,6 +539,6 @@ export default function Assessment() {
           )}
         </div>
       </div>
-    </>
+    </div>
   );
 }

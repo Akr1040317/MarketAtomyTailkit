@@ -1,23 +1,27 @@
-// DarkSidebarWithSideContentLeft.jsx
 import { useState, useEffect } from "react";
 import { auth, db } from "./firebaseConfig";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
+import { useNavigate } from "react-router-dom";
 import companyLogo from "./assets/companyLogo.png";
 import { Menu, MenuButton, MenuItems, MenuItem, Transition } from "@headlessui/react";
 
 // Import your separate view components
 import Dashboard from "./Dashboard.jsx";
 import Assessment from "./Assessment.jsx";
+import AssessmentUser from "./AssessmentUser.jsx";
 
 export default function DarkSidebarWithSideContentLeft() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
-  // Remove mobileSideContentOpen state since each view manages its own toggle
+  // activeView will be "dashboard", "assessment" (admin) or "assessmentUser" (non-admin)
   const [activeView, setActiveView] = useState("assessment");
-
   // State to hold the firstName from Firestore
   const [firstName, setFirstName] = useState("");
+  // State to hold the user's role (admin, tier1, tier2, tier3, etc.)
+  const [userRole, setUserRole] = useState("");
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -28,6 +32,13 @@ export default function DarkSidebarWithSideContentLeft() {
           if (docSnap.exists()) {
             const userData = docSnap.data();
             setFirstName(userData.firstName || "");
+            setUserRole(userData.role || "");
+            // Update activeView based on role:
+            if (userData.role !== "admin") {
+              setActiveView("assessmentUser");
+            } else {
+              setActiveView("assessment");
+            }
           }
         } catch (error) {
           console.error("Error fetching user data: ", error);
@@ -38,6 +49,17 @@ export default function DarkSidebarWithSideContentLeft() {
     });
     return () => unsubscribe();
   }, []);
+
+  // Logout function with redirection to login page
+  const handleLogout = async (e) => {
+    e.preventDefault();
+    try {
+      await signOut(auth);
+      navigate("/login"); // Redirect to loginpage.jsx after logout
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
+  };
 
   return (
     <>
@@ -128,84 +150,81 @@ export default function DarkSidebarWithSideContentLeft() {
                     </svg>
                   </span>
                   <span className="grow py-2">Dashboard</span>
-                  <span className="inline-flex rounded-full border border-blue-700 bg-blue-700 px-1.5 py-0.5 text-xs leading-4 font-semibold text-blue-50">
-                    3
-                  </span>
                 </a>
 
                 <div className="px-3 pt-5 pb-2 text-xs font-semibold tracking-wider text-gray-500 uppercase">
                   Projects
                 </div>
 
-                {/* Assessment Link */}
-                <a
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setActiveView("assessment");
-                  }}
-                  className={`group flex items-center gap-2 rounded-lg border border-transparent px-2.5 text-sm font-medium ${
-                    activeView === "assessment"
-                      ? "bg-gray-700/75 text-white"
-                      : "text-gray-200 hover:bg-gray-700/75 hover:text-white active:border-gray-600"
-                  }`}
-                >
-                  <span className="flex flex-none items-center text-gray-500 group-hover:text-gray-300">
-                    <svg
-                      className="hi-outline hi-briefcase inline-block size-5"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth="1.5"
-                      stroke="currentColor"
-                      aria-hidden="true"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 00.75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 00-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0112 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 01-.673-.38m0 0A2.18 2.18 0 013 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 013.413-.387m7.5 0V5.25A2.25 2.25 0 0013.5 3h-3a2.25 2.25 0 00-2.25 2.25v.894m7.5 0a48.667 48.667 0 00-7.5 0M12 12.75h.008v.008H12v-.008z"
-                      />
-                    </svg>
-                  </span>
-                  <span className="grow py-2">Assessment</span>
-                  <span className="inline-flex rounded-full border border-blue-700 bg-blue-700 px-1.5 py-0.5 text-xs leading-4 font-semibold text-blue-50">
-                    99+
-                  </span>
-                </a>
-                <a
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setActiveView("assessment");
-                  }}
-                  className={`group flex items-center gap-2 rounded-lg border border-transparent px-2.5 text-sm font-medium ${
-                    activeView === "assessment"
-                      ? "bg-gray-700/75 text-white"
-                      : "text-gray-200 hover:bg-gray-700/75 hover:text-white active:border-gray-600"
-                  }`}
-                >
-                  <span className="flex flex-none items-center text-gray-500 group-hover:text-gray-300">
-                    <svg
-                      className="hi-outline hi-briefcase inline-block size-5"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth="1.5"
-                      stroke="currentColor"
-                      aria-hidden="true"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 00.75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 00-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0112 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 01-.673-.38m0 0A2.18 2.18 0 013 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 013.413-.387m7.5 0V5.25A2.25 2.25 0 0013.5 3h-3a2.25 2.25 0 00-2.25 2.25v.894m7.5 0a48.667 48.667 0 00-7.5 0M12 12.75h.008v.008H12v-.008z"
-                      />
-                    </svg>
-                  </span>
-                  <span className="grow py-2">Analytics</span>
-                  <span className="inline-flex rounded-full border border-blue-700 bg-blue-700 px-1.5 py-0.5 text-xs leading-4 font-semibold text-blue-50">
-                    99+
-                  </span>
-                </a>
+                {/* Assessment Link: Render different options based on user role */}
+                {userRole === "admin" ? (
+                  <a
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setActiveView("assessment");
+                    }}
+                    className={`group flex items-center gap-2 rounded-lg border border-transparent px-2.5 text-sm font-medium ${
+                      activeView === "assessment"
+                        ? "bg-gray-700/75 text-white"
+                        : "text-gray-200 hover:bg-gray-700/75 hover:text-white active:border-gray-600"
+                    }`}
+                  >
+                    <span className="flex flex-none items-center text-gray-500 group-hover:text-gray-300">
+                      <svg
+                        className="hi-outline hi-briefcase inline-block size-5"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth="1.5"
+                        stroke="currentColor"
+                        aria-hidden="true"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 00.75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 00-3.413-.387"
+                        />
+                      </svg>
+                    </span>
+                    <span className="grow py-2">Assessment Management</span>
+                  </a>
+                ) : (
+                  <a
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setActiveView("assessmentUser");
+                    }}
+                    className={`group flex items-center gap-2 rounded-lg border border-transparent px-2.5 text-sm font-medium ${
+                      activeView === "assessmentUser"
+                        ? "bg-gray-700/75 text-white"
+                        : "text-gray-200 hover:bg-gray-700/75 hover:text-white active:border-gray-600"
+                    }`}
+                  >
+                    <span className="flex flex-none items-center text-gray-500 group-hover:text-gray-300">
+                      <svg
+                        className="hi-outline hi-briefcase inline-block size-5"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth="1.5"
+                        stroke="currentColor"
+                        aria-hidden="true"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 00.75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 00-3.413-.387"
+                        />
+                      </svg>
+                    </span>
+                    <span className="grow py-2">Assessment</span>
+                    <span className="inline-flex rounded-full border border-blue-700 bg-blue-700 px-1.5 py-0.5 text-xs leading-4 font-semibold text-blue-50">
+                      99+
+                    </span>
+                  </a>
+                )}
 
                 <a
                   href="#"
@@ -232,25 +251,27 @@ export default function DarkSidebarWithSideContentLeft() {
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
-                        d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 00.75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 00-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0112 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 01-.673-.38m0 0A2.18 2.18 0 013 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 013.413-.387m7.5 0V5.25A2.25 2.25 0 0013.5 3h-3a2.25 2.25 0 00-2.25 2.25v.894m7.5 0a48.667 48.667 0 00-7.5 0M12 12.75h.008v.008H12v-.008z"
+                        d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 00.75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 00-3.413-.387"
                       />
                     </svg>
                   </span>
-                  <span className="grow py-2">Resources</span>
-                  <span className="inline-flex rounded-full border border-blue-700 bg-blue-700 px-1.5 py-0.5 text-xs leading-4 font-semibold text-blue-50">
-                    99+
-                  </span>
+                  <span className="grow py-2">Analytics</span>
                 </a>
-                <div className="px-3 pt-5 pb-2 text-xs font-semibold tracking-wider text-gray-500 uppercase">
-                  Profile
-                </div>
                 <a
                   href="#"
-                  className="group flex items-center gap-2 rounded-lg border border-transparent px-2.5 text-sm font-medium text-gray-200 hover:bg-gray-700/75 hover:text-white active:border-gray-600"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setActiveView("assessment");
+                  }}
+                  className={`group flex items-center gap-2 rounded-lg border border-transparent px-2.5 text-sm font-medium ${
+                    activeView === "assessment"
+                      ? "bg-gray-700/75 text-white"
+                      : "text-gray-200 hover:bg-gray-700/75 hover:text-white active:border-gray-600"
+                  }`}
                 >
                   <span className="flex flex-none items-center text-gray-500 group-hover:text-gray-300">
                     <svg
-                      className="hi-outline hi-cog-8-tooth inline-block size-5"
+                      className="hi-outline hi-briefcase inline-block size-5"
                       xmlns="http://www.w3.org/2000/svg"
                       fill="none"
                       viewBox="0 0 24 24"
@@ -261,19 +282,18 @@ export default function DarkSidebarWithSideContentLeft() {
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
-                        d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.397.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 01-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.107-1.204l-.527-.738a1.125 1.125 0 01.12-1.45l.773-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894z"
-                      />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                        d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 00.75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 00-3.413-.387"
                       />
                     </svg>
                   </span>
-                  <span className="grow py-2">Settings</span>
+                  <span className="grow py-2">Resources</span>
                 </a>
+                <div className="px-3 pt-5 pb-2 text-xs font-semibold tracking-wider text-gray-500 uppercase">
+                  Profile
+                </div>
                 <a
                   href="#"
+                  onClick={handleLogout}
                   className="group flex items-center gap-2 rounded-lg border border-transparent px-2.5 text-sm font-medium text-gray-200 hover:bg-gray-700/75 hover:text-white active:border-gray-600"
                 >
                   <span className="flex flex-none items-center text-gray-500 group-hover:text-gray-300">
@@ -295,8 +315,7 @@ export default function DarkSidebarWithSideContentLeft() {
                   </span>
                   <span className="grow py-2">Log out</span>
                 </a>
-                {/* ... Additional Sidebar Links (Results, Analytics, Resources, Account, etc.) remain unchanged ... */}
-
+                {/* ... Additional Sidebar Links remain unchanged ... */}
               </nav>
             </div>
           </div>
@@ -307,7 +326,7 @@ export default function DarkSidebarWithSideContentLeft() {
         {/* Page Header */}
         <header
           id="page-header"
-          className={`fixed top-0 right-0 left-0 z-30 flex h-16 flex-none items-center shadow-sm dark:bg-secondary-400 ${
+          className={`fixed top-0 right-0 left-0 z-30 flex h-16 flex-none items-center shadow-sm bg-[#10172A] dark:bg-gray-800 ${
             desktopSidebarOpen ? "lg:pl-64" : ""
           }`}
         >
@@ -386,7 +405,7 @@ export default function DarkSidebarWithSideContentLeft() {
             {/* Center Section (Large Screens) */}
             <div className="hidden lg:flex flex-1 justify-center">
               <span className="text-xl text-white font-semibold">
-                Welcome to the BHC
+                {`Welcome to the BHC${userRole === "admin" ? " (Admin Portal)" : ""}`}
               </span>
             </div>
             {/* Right Section */}
@@ -458,7 +477,20 @@ export default function DarkSidebarWithSideContentLeft() {
                     className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-lg shadow-xl focus:outline-hidden dark:shadow-gray-900"
                   >
                     <div className="divide-y divide-gray-100 rounded-lg bg-white ring-1 ring-black/5 dark:divide-gray-700 dark:bg-gray-800 dark:ring-gray-700">
-                      {/* ... Dropdown menu items (Inbox, Notifications, Account, Settings, Sign out) remain unchanged ... */}
+                      {/* ... Dropdown menu items remain unchanged ... */}
+                      <MenuItem>
+                        {({ active }) => (
+                          <a
+                            href="#"
+                            onClick={handleLogout}
+                            className={`${
+                              active ? "bg-gray-100 dark:bg-gray-700" : ""
+                            } block px-4 py-2 text-sm text-gray-700 dark:text-gray-300`}
+                          >
+                            Log out
+                          </a>
+                        )}
+                      </MenuItem>
                     </div>
                   </MenuItems>
                 </Transition>
@@ -478,7 +510,13 @@ export default function DarkSidebarWithSideContentLeft() {
         >
           {/* The active view now entirely manages its own side content */}
           <div className="mx-auto flex w-full max-w-10xl grow flex-col p-4 lg:p-8">
-            {activeView === "dashboard" ? <Dashboard /> : <Assessment />}
+            {activeView === "dashboard" ? (
+              <Dashboard />
+            ) : activeView === "assessment" ? (
+              <Assessment />
+            ) : (
+              <AssessmentUser />
+            )}
           </div>
         </main>
         {/* END Page Content */}
@@ -498,30 +536,8 @@ export default function DarkSidebarWithSideContentLeft() {
               ©
             </div>
             <div className="inline-flex items-center justify-center pt-1 pb-4 md:pt-4">
-              <span>Crafted with</span>
-              <svg
-                className="hi-solid hi-heart mx-1 inline-block size-4 text-red-600"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              <span>
-                by{" "}
-                <a
-                  href="https://pixelcave.com"
-                  target="_blank"
-                  className="font-medium text-blue-600 hover:text-blue-400 dark:text-blue-400 dark:hover:text-blue-300"
-                  rel="noreferrer"
-                >
-                  pixelcave
-                </a>
-              </span>
+              <span className="text-white">Developed by Akshat Rastogi </span>
+              
             </div>
           </div>
         </footer>
