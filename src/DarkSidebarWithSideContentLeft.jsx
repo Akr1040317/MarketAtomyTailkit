@@ -66,7 +66,7 @@ export default function DarkSidebarWithSideContentLeft() {
       {/* Page Container */}
       <div
         id="page-container"
-        className={`mx-auto flex min-h-dvh w-full min-w-80 flex-col dark:bg-gray-900 dark:text-gray-100 ${
+        className={`mx-auto flex min-h-dvh w-full min-w-80 flex-col bg-[#101b31] dark:text-gray-100 ${
           desktopSidebarOpen ? "lg:pl-64" : ""
         }`}
       >
@@ -220,9 +220,7 @@ export default function DarkSidebarWithSideContentLeft() {
                       </svg>
                     </span>
                     <span className="grow py-2">Assessment</span>
-                    <span className="inline-flex rounded-full border border-blue-700 bg-blue-700 px-1.5 py-0.5 text-xs leading-4 font-semibold text-blue-50">
-                      99+
-                    </span>
+                    
                   </a>
                 )}
 
@@ -326,9 +324,10 @@ export default function DarkSidebarWithSideContentLeft() {
         {/* Page Header */}
         <header
           id="page-header"
-          className={`fixed top-0 right-0 left-0 z-30 flex h-16 flex-none items-center shadow-sm bg-[#10172A] dark:bg-gray-800 ${
+          className={`fixed top-0 right-0 left-0 z-30 flex h-16 flex-none items-center bg-[#10172A] dark:bg-gray-800 ${
             desktopSidebarOpen ? "lg:pl-64" : ""
           }`}
+          style={{ boxShadow: "0 10px 40px #162442" }}
         >
           <div className="mx-auto flex w-full max-w-10xl justify-between px-4 lg:px-8">
             {/* Left Section */}
