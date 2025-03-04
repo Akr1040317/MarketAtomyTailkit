@@ -199,7 +199,7 @@ export default function AssessmentUser() {
   };
 
   return (
-    <div className="overflow-x-hidden">
+    <div className="overflow-x-hidden bg-[#101b31] min-h-screen">
       {/* Mobile Toggle for Side Content */}
       <div className="w-full bg-gray-50 p-4 lg:hidden lg:p-8 dark:bg-gray-800/25">
         <button
