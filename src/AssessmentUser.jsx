@@ -8,6 +8,7 @@ import {
   addDoc,
   updateDoc,
   doc,
+  getDoc,
   serverTimestamp,
   where,
 } from "firebase/firestore";
@@ -21,7 +22,7 @@ export default function AssessmentUser() {
   const [sections, setSections] = useState([]);
   // The section currently selected by the user
   const [selectedSection, setSelectedSection] = useState(null);
-  // Stores the user's answers for the selected section's questions
+  // Stores the user's answers for the selected section's questions (raw strings or arrays)
   const [answers, setAnswers] = useState({});
   // Stores the section names that the current user has completed
   const [completedSections, setCompletedSections] = useState([]);
@@ -89,11 +90,41 @@ export default function AssessmentUser() {
           where("sectionName", "==", section.title)
         );
         const querySnapshot = await getDocs(q);
+
         if (querySnapshot.docs.length > 0) {
           const docSnap = querySnapshot.docs[0];
           const data = docSnap.data();
-          setAnswers(data.answers);
+
+          // Store the original submission doc
           setExistingSubmission({ id: docSnap.id, data });
+
+          // Normalize the fetched answers so that `answers` in state
+          // only has raw values (strings or arrays of strings).
+          const normalizedAnswers = {};
+
+          if (section.questions && section.questions.length > 0) {
+            section.questions.forEach((qItem) => {
+              const storedAnswer = data.answers[qItem.id];
+              if (!storedAnswer) return;
+
+              if (qItem.type === "multipleChoice") {
+                // storedAnswer is something like: { answer: "Yes", weight: 2 }
+                normalizedAnswers[qItem.id] = storedAnswer.answer;
+              } else if (qItem.type === "multipleSelect") {
+                // storedAnswer is an array of objects: [{ answer: "Option A", weight: 1 }, ...]
+                if (Array.isArray(storedAnswer)) {
+                  normalizedAnswers[qItem.id] = storedAnswer.map((a) => a.answer);
+                } else {
+                  normalizedAnswers[qItem.id] = [];
+                }
+              } else {
+                // e.g. text input => { answer: "some text", weight: null }
+                normalizedAnswers[qItem.id] = storedAnswer.answer;
+              }
+            });
+          }
+
+          setAnswers(normalizedAnswers);
           setIsEditMode(false); // Show read-only view by default
         } else {
           setExistingSubmission(null);
@@ -134,6 +165,7 @@ export default function AssessmentUser() {
     // Check that every question has been answered.
     const unanswered = selectedSection.questions.filter((q) => {
       const ans = answers[q.id];
+      // For multipleSelect, ensure there's at least one option
       return q.type === "multipleSelect" ? !ans || ans.length === 0 : !ans || ans === "";
     });
 
@@ -142,41 +174,47 @@ export default function AssessmentUser() {
       return;
     }
 
-    // Process answers and attach weight information if applicable
-    let processedAnswers = {};
-    selectedSection.questions.forEach((q) => {
-      const ans = answers[q.id];
-      if (q.type === "multipleChoice") {
-        const option = q.options.find((o) => o.label === ans);
-        processedAnswers[q.id] = {
-          answer: ans,
-          weight: option ? option.weight : null,
-        };
-      } else if (q.type === "multipleSelect") {
-        processedAnswers[q.id] = ans.map((a) => {
-          const option = q.options.find((o) => o.label === a);
-          return { answer: a, weight: option ? option.weight : null };
-        });
-      } else {
-        processedAnswers[q.id] = {
-          answer: ans,
-          weight: null,
-        };
-      }
-    });
-
     if (!user) {
       alert("User not logged in. Please log in to submit your answers.");
       return;
     }
 
-    // Prepare the submission object
+    // Process answers and attach weight information if applicable
+    let processedAnswers = {};
+    let sectionScore = 0; // Sum of weights for the section
+    selectedSection.questions.forEach((q) => {
+      const ans = answers[q.id];
+      if (q.type === "multipleChoice") {
+        const option = q.options.find((o) => o.label === ans);
+        const weight = option ? option.weight : 0;
+        sectionScore += weight;
+        processedAnswers[q.id] = {
+          answer: ans,
+          weight: weight,
+        };
+      } else if (q.type === "multipleSelect") {
+        processedAnswers[q.id] = ans.map((a) => {
+          const option = q.options.find((o) => o.label === a);
+          const weight = option ? option.weight : 0;
+          sectionScore += weight;
+          return { answer: a, weight: weight };
+        });
+      } else {
+        processedAnswers[q.id] = {
+          answer: ans,
+          weight: 0,
+        };
+      }
+    });
+
+    // Prepare the submission object with computed section score
     const submission = {
       userId: user.uid,
       userEmail: user.email,
       submittedAt: serverTimestamp(),
       sectionName: selectedSection.title,
       answers: processedAnswers,
+      sectionScore: sectionScore, // New field for section score
     };
 
     try {
@@ -192,6 +230,51 @@ export default function AssessmentUser() {
       }
       fetchCompletedSections();
       setIsEditMode(false);
+
+      // Now update the user's computedScores in the "users" collection
+      const userDocRef = doc(db, "users", user.uid);
+      const userDocSnap = await getDoc(userDocRef);
+      let userData = {};
+      if (userDocSnap.exists()) {
+        userData = userDocSnap.data();
+      }
+      // Initialize computedScores map if it doesn't exist
+      let computedScores = userData.computedScores || {
+        foundationalStructure: { sections: {}, total: 0 },
+        financialPosition: { sections: {}, total: 0 },
+        salesMarketing: { sections: {}, total: 0 },
+        productService: { sections: {}, total: 0 },
+        general: { sections: {}, total: 0 },
+      };
+
+      // Determine the section number (assuming it's stored in selectedSection.order)
+      const sectionNumber = selectedSection.order;
+
+      // Define category mapping: which sections belong to which categories
+      const categoryMapping = {
+        foundationalStructure: [2, 3, 5, 6, 7],
+        financialPosition: [4, 8, 11, 12, 16, 17, 18],
+        salesMarketing: [10, 12, 13, 14, 15],
+        productService: [8, 9, 19],
+        general: [20, 21],
+      };
+
+      // Update computedScores for categories that include this section
+      Object.keys(categoryMapping).forEach((categoryKey) => {
+        if (categoryMapping[categoryKey].includes(sectionNumber)) {
+          // Update the score for this section in the category
+          computedScores[categoryKey].sections[sectionNumber] = sectionScore;
+          // Recalculate the total score for this category
+          const totalScore = Object.values(computedScores[categoryKey].sections).reduce(
+            (sum, val) => sum + (val || 0),
+            0
+          );
+          computedScores[categoryKey].total = totalScore;
+        }
+      });
+
+      // Update the user document with the new computedScores
+      await updateDoc(userDocRef, { computedScores: computedScores });
     } catch (error) {
       console.error("Error submitting/updating answers:", error);
       alert("There was an error submitting your answers. Please try again.");
@@ -244,7 +327,11 @@ export default function AssessmentUser() {
                       {section.questions ? section.questions.length : 0} questions
                     </p>
                     {/* Status Icon and Text in Bottom Right */}
-                    <span className={`absolute bottom-2 right-2 flex items-center ${isCompleted ? "text-green-600" : "text-red-600"}`}>
+                    <span
+                      className={`absolute bottom-2 right-2 flex items-center ${
+                        isCompleted ? "text-green-600" : "text-red-600"
+                      }`}
+                    >
                       {isCompleted ? (
                         <>
                           <span className="mr-1">➤</span>
@@ -297,16 +384,12 @@ export default function AssessmentUser() {
                             {(() => {
                               const ans = answers[question.id];
                               if (Array.isArray(ans)) {
-                                // If array of objects, extract the answer property
-                                return ans
-                                  .map((a) =>
-                                    typeof a === "object" && a !== null ? a.answer : a
-                                  )
-                                  .join(", ");
-                              } else if (typeof ans === "object" && ans !== null) {
-                                return ans.answer;
+                                // multipleSelect: array of strings
+                                return ans.join(", ");
+                              } else {
+                                // multipleChoice or text input: string
+                                return ans;
                               }
-                              return ans;
                             })()}
                           </p>
                         </div>
@@ -397,7 +480,10 @@ export default function AssessmentUser() {
                           </p>
                         </div>
                       )}
-                      <button type="submit" className="px-4 py-2 bg-green-600 text-white rounded-lg">
+                      <button
+                        type="submit"
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg"
+                      >
                         {existingSubmission ? "Save" : "Submit Answers"}
                       </button>
                     </form>
@@ -408,7 +494,6 @@ export default function AssessmentUser() {
                   No questions in this section.
                 </p>
               )}
-              
             </div>
           ) : (
             <div className="flex items-center justify-center rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 py-64 text-gray-400 dark:border-gray-700 dark:bg-gray-800">
