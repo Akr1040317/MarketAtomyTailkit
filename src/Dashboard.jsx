@@ -3,225 +3,232 @@ import { getAuth } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "./firebaseConfig";
 
+// Constants for category configuration
+const CATEGORIES = {
+  foundationalStructure: {
+    label: "Foundational Structure",
+    color: "bg-blue-600",
+  },
+  financialPosition: {
+    label: "Financial Strength",
+    color: "bg-emerald-600",
+  },
+  salesMarketing: {
+    label: "Sales & Marketing",
+    color: "bg-purple-600",
+  },
+  productService: {
+    label: "Product Viability",
+    color: "bg-amber-500",
+  },
+  general: {
+    label: "Overall Health",
+    color: "bg-teal-600",
+  },
+};
+
+const CATEGORY_ORDER = Object.keys(CATEGORIES);
+
+// Score Card Component
+const ScoreCard = ({ score, label, colorClass }) => (
+  <div className="relative flex flex-col p-5 bg-white rounded-xl shadow-lg border border-gray-100 transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
+    <div className="text-3xl font-extrabold text-gray-900">{score}%</div>
+    <div className="text-sm font-medium text-gray-500 mt-1">{label}</div>
+    <div className="w-full bg-gray-100 h-2 rounded-full mt-3 overflow-hidden">
+      <div
+        className={`${colorClass} h-2 rounded-full transition-all duration-500 ease-out`}
+        style={{ width: `${score}%` }}
+      />
+    </div>
+  </div>
+);
+
+// Roadmap Step Component
+const RoadmapStep = ({ step, label, isActive }) => (
+  <div className="flex flex-col items-center">
+    <div
+      className={`w-10 h-10 rounded-full flex items-center justify-center text-base font-bold transition-all duration-300 ${
+        isActive ? "bg-emerald-500 text-white shadow-md" : "bg-gray-300 text-gray-600"
+      }`}
+    >
+      {step}
+    </div>
+    <span className="mt-3 text-sm font-medium text-gray-300">{label}</span>
+  </div>
+);
+
 export default function Dashboard() {
   const [computedScores, setComputedScores] = useState(null);
   const auth = getAuth();
   const user = auth.currentUser;
 
-  // Fetch user's computed scores from Firestore
+  // Fetch user's computed scores
   useEffect(() => {
-    async function fetchUserScores() {
+    const fetchUserScores = async () => {
       if (!user) return;
       try {
         const userDocRef = doc(db, "users", user.uid);
         const userDocSnap = await getDoc(userDocRef);
         if (userDocSnap.exists()) {
           const userData = userDocSnap.data();
-          if (userData.computedScores) {
-            setComputedScores(userData.computedScores);
-          }
+          setComputedScores(userData.computedScores || {});
         }
       } catch (error) {
         console.error("Error fetching user scores:", error);
       }
-    }
+    };
 
     fetchUserScores();
   }, [user]);
 
-  // Helper function to safely get a score (returns 0 if not found)
-  const getScore = (categoryKey) => {
-    return computedScores && computedScores[categoryKey]
-      ? computedScores[categoryKey].total
-      : 0;
-  };
-
-  // Category definitions
-  const categoryLabels = {
-    foundationalStructure: "Foundational Structure",
-    financialPosition: "Financial Strength",
-    salesMarketing: "Sales & Marketing",
-    productService: "Product Viability",
-    general: "Overall Health",
-  };
-
-  // You can adjust these colors to match your design or dynamically choose colors
-  const categoryColors = {
-    foundationalStructure: "bg-green-500",
-    financialPosition: "bg-green-500",
-    salesMarketing: "bg-red-500",
-    productService: "bg-yellow-500",
-    general: "bg-red-500",
-  };
-
-  // Order in which to display the categories
-  const categories = [
-    "foundationalStructure",
-    "financialPosition",
-    "salesMarketing",
-    "productService",
-    "general",
-  ];
-
-  // Score Card Component
-  function ScoreCard({ score, label, colorClass }) {
-    return (
-      <div className="p-4 bg-white rounded-lg shadow border border-gray-100">
-        <div className="text-2xl font-bold text-gray-800">{score}%</div>
-        <div className="text-sm text-gray-500">{label}</div>
-        <div className="w-full bg-gray-200 h-2 rounded-full mt-2">
-          <div
-            className={`${colorClass} h-2 rounded-full`}
-            style={{ width: `${score}%` }}
-          ></div>
-        </div>
-      </div>
-    );
-  }
+  // Get score safely
+  const getScore = (categoryKey) =>
+    computedScores?.[categoryKey]?.total ?? 0;
 
   return (
-    <div className="bg-[#101b31] min-h-screen p-4 lg:p-8">
-      <div className="max-w-7xl mx-auto space-y-8">
-        {/* Header / Title */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-2 sm:space-y-0">
-          <h1 className="text-2xl font-bold text-white">
-            Welcome to Your Business Health Dashboard
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-gray-100 p-6 lg:p-10">
+      <div className="max-w-7xl mx-auto space-y-10">
+        {/* Introduction Section */}
+        <section className="bg-white rounded-2xl shadow-xl p-8 transition-all duration-300">
+          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
+            Business Health Check Assessment
           </h1>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-1 sm:space-y-0 sm:space-x-4">
-            <span className="bg-green-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
+          <p className="mt-4 text-gray-600 leading-relaxed">
+            The Business Health Check (BHC) Assessment evaluates your business
+            across 21 critical Key Performance Indicators (KPIs) grouped into five
+            interdependent systems: Foundational Structure, Financial Strength,
+            Sales & Marketing, Product Viability, and Overall Health. This
+            comprehensive analysis identifies strengths and gaps, providing
+            actionable recommendations to drive growth and customer engagement.
+          </p>
+          <div className="mt-6 flex items-center space-x-4">
+            <span className="bg-emerald-500 text-white px-4 py-1.5 rounded-full text-sm font-semibold shadow-sm">
               Assessment Completed
             </span>
-            <span className="text-sm text-gray-200">Last Updated: Jan 15, 2025</span>
+            <span className="text-sm text-gray-500">
+              Last Updated: Jan 15, 2025
+            </span>
           </div>
-        </div>
-        <p className="text-gray-300">
-          Your assessment shows both strengths and areas for improvement. Let’s work
-          together to optimize your business health.
-        </p>
+        </section>
 
-        {/* Business Health Scores (new format) */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-bold text-gray-900">Business Health Scores</h2>
-
-          {!computedScores && (
-            <p className="text-gray-500 mt-4">Loading scores...</p>
-          )}
-
-          {computedScores && (
-            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-              {categories.map((catKey) => {
-                const score = getScore(catKey);
-                const label = categoryLabels[catKey];
-                const colorClass = categoryColors[catKey];
-                return (
-                  <ScoreCard
-                    key={catKey}
-                    score={score}
-                    label={label}
-                    colorClass={colorClass}
-                  />
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Next Steps */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-2 space-y-4">
-            {/* Placeholder or Additional Content */}
-          </div>
-          <div className="md:col-span-1 space-y-4">
-            <h2 className="text-xl font-bold text-white">Next Steps</h2>
-            <div className="bg-gray-900 p-4 rounded-lg text-gray-100 space-y-2">
-              <div className="flex items-center">
-                <span className="mr-2">1.</span>
-                <span>Schedule Marketing Strategy Session</span>
-              </div>
-              <div className="flex items-center">
-                <span className="mr-2">2.</span>
-                <span>Complete Product Analysis</span>
-              </div>
-              <div className="flex items-center">
-                <span className="mr-2">3.</span>
-                <span>Final Assessment Complete</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Business Growth Roadmap */}
-        <div>
-          <h2 className="text-xl font-bold text-white mb-4">
-            Your Business Growth Roadmap
+        {/* Scores Section */}
+        <section className="bg-white rounded-2xl shadow-xl p-8">
+          <h2 className="text-2xl font-bold text-gray-900 tracking-tight">
+            Your Business Health Scores
           </h2>
-          <div className="flex items-center justify-between bg-gray-900 p-4 rounded-lg">
-            {/* Step 1 */}
-            <div className="flex flex-col items-center text-gray-100">
-              <div className="bg-green-600 w-8 h-8 rounded-full flex items-center justify-center text-sm">
-                1
-              </div>
-              <span className="mt-2">Assessment</span>
+          <p className="mt-2 text-gray-600 leading-relaxed">
+            Review your performance across key business areas.
+          </p>
+          {!computedScores ? (
+            <p className="mt-4 text-gray-500 animate-pulse">Loading scores...</p>
+          ) : (
+            <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+              {CATEGORY_ORDER.map((key) => (
+                <ScoreCard
+                  key={key}
+                  score={getScore(key)}
+                  label={CATEGORIES[key].label}
+                  colorClass={CATEGORIES[key].color}
+                />
+              ))}
             </div>
-            <div className="h-0.5 bg-gray-600 flex-1 mx-2"></div>
-            {/* Step 2 */}
-            <div className="flex flex-col items-center text-gray-100">
-              <div className="bg-green-600 w-8 h-8 rounded-full flex items-center justify-center text-sm">
-                2
-              </div>
-              <span className="mt-2">Analysis</span>
-            </div>
-            <div className="h-0.5 bg-gray-600 flex-1 mx-2"></div>
-            {/* Step 3 */}
-            <div className="flex flex-col items-center text-gray-100">
-              <div className="bg-green-600 w-8 h-8 rounded-full flex items-center justify-center text-sm">
-                3
-              </div>
-              <span className="mt-2">Strategy</span>
-            </div>
-            <div className="h-0.5 bg-gray-600 flex-1 mx-2"></div>
-            {/* Step 4 */}
-            <div className="flex flex-col items-center text-gray-100">
-              <div className="bg-gray-600 w-8 h-8 rounded-full flex items-center justify-center text-sm">
-                4
-              </div>
-              <span className="mt-2">Implementation</span>
-            </div>
-            <div className="h-0.5 bg-gray-600 flex-1 mx-2"></div>
-            {/* Step 5 */}
-            <div className="flex flex-col items-center text-gray-100">
-              <div className="bg-gray-600 w-8 h-8 rounded-full flex items-center justify-center text-sm">
-                5
-              </div>
-              <span className="mt-2">Growth</span>
-            </div>
-          </div>
-        </div>
+          )}
+        </section>
 
-        {/* Recommended Resources */}
-        <div>
-          <h2 className="text-xl font-bold text-white mb-4">Recommended Resources</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="bg-gray-900 p-4 rounded-lg text-gray-100">
-              <h3 className="font-semibold text-lg">Customer Magnet Series</h3>
-              <p className="text-sm text-gray-300 mt-2">
-                5-step vision clarification video series
-              </p>
-            </div>
-            <div className="bg-gray-900 p-4 rounded-lg text-gray-100">
-              <h3 className="font-semibold text-lg">Side Hustle Guide</h3>
-              <p className="text-sm text-gray-300 mt-2">
-                Essential steps to maximize mini-hustle
-              </p>
-            </div>
-            <div className="bg-gray-900 p-4 rounded-lg text-gray-100">
-              <h3 className="font-semibold text-lg">Strategy Session</h3>
-              <p className="text-sm text-gray-300 mt-2">
-                Work with a mentor to finalize your action plan
-              </p>
+        {/* Next Steps & Placeholder */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="md:col-span-2 bg-white rounded-2xl shadow-xl p-8">
+            <h2 className="text-2xl font-bold text-gray-900 tracking-tight">
+              Detailed Insights
+            </h2>
+            <p className="mt-2 text-gray-600 leading-relaxed">
+              Coming soon: In-depth analysis and recommendations tailored to your
+              scores.
+            </p>
+          </div>
+          <div className="md:col-span-1">
+            <h2 className="text-2xl font-bold text-white mb-4 tracking-tight">
+              Next Steps
+            </h2>
+            <div className="bg-gray-800/50 backdrop-blur-sm p-6 rounded-xl text-gray-100 space-y-4">
+              {[
+                "Schedule Marketing Strategy Session",
+                "Complete Product Analysis",
+                "Finalize Assessment Review",
+              ].map((step, index) => (
+                <div
+                  key={index}
+                  className="flex items-center text-sm font-medium transition-colors hover:text-emerald-400"
+                >
+                  <span className="mr-3 text-emerald-400 font-bold">
+                    {index + 1}.
+                  </span>
+                  <span>{step}</span>
+                </div>
+              ))}
             </div>
           </div>
-        </div>
+        </section>
+
+        {/* Roadmap Section */}
+        <section>
+          <h2 className="text-2xl font-bold text-white mb-4 tracking-tight">
+            Your Growth Roadmap
+          </h2>
+          <div className="bg-gray-800/50 backdrop-blur-sm p-8 rounded-xl flex items-center justify-between relative">
+            {[
+              { step: 1, label: "Assessment", active: true },
+              { step: 2, label: "Analysis", active: true },
+              { step: 3, label: "Strategy", active: true },
+              { step: 4, label: "Implementation", active: false },
+              { step: 5, label: "Growth", active: false },
+            ].map(({ step, label, active }, index, arr) => (
+              <React.Fragment key={step}>
+                <RoadmapStep step={step} label={label} isActive={active} />
+                {index < arr.length - 1 && (
+                  <div className="h-1 bg-gray-600/50 flex-1 mx-4 rounded-full relative">
+                    <div
+                      className={`absolute h-1 rounded-full transition-all duration-500 ${
+                        active ? "bg-emerald-500 w-full" : "bg-transparent w-0"
+                      }`}
+                    />
+                  </div>
+                )}
+              </React.Fragment>
+            ))}
+          </div>
+        </section>
+
+        {/* Resources Section */}
+        <section>
+          <h2 className="text-2xl font-bold text-white mb-4 tracking-tight">
+            Recommended Resources
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[
+              {
+                title: "Customer Magnet Series",
+                desc: "5-step vision clarification video series",
+              },
+              {
+                title: "Side Hustle Guide",
+                desc: "Essential steps to maximize your hustle",
+              },
+              {
+                title: "Strategy Session",
+                desc: "Work with a mentor to finalize your plan",
+              },
+            ].map(({ title, desc }) => (
+              <div
+                key={title}
+                className="bg-gray-800/50 backdrop-blur-sm p-6 rounded-xl text-gray-100 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:bg-gray-700/50"
+              >
+                <h3 className="font-semibold text-lg text-white">{title}</h3>
+                <p className="text-sm text-gray-300 mt-2 leading-relaxed">{desc}</p>
+              </div>
+            ))}
+          </div>
+        </section>
       </div>
     </div>
   );

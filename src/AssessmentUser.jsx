@@ -1,4 +1,3 @@
-// AssessmentUser.jsx
 import React, { useState, useEffect } from "react";
 import {
   collection,
@@ -16,25 +15,18 @@ import { getAuth } from "firebase/auth";
 import { db } from "./firebaseConfig";
 
 export default function AssessmentUser() {
-  // Mobile toggle for side content
   const [mobileSideContentOpen, setMobileSideContentOpen] = useState(false);
-  // Sections fetched from Firestore
   const [sections, setSections] = useState([]);
-  // The section currently selected by the user
   const [selectedSection, setSelectedSection] = useState(null);
-  // Stores the user's answers for the selected section's questions (raw strings or arrays)
   const [answers, setAnswers] = useState({});
-  // Stores the section names that the current user has completed
   const [completedSections, setCompletedSections] = useState([]);
-  // Stores an existing submission (if any) for the selected section
   const [existingSubmission, setExistingSubmission] = useState(null);
-  // Controls whether the answers are editable
   const [isEditMode, setIsEditMode] = useState(true);
 
   const auth = getAuth();
   const user = auth.currentUser;
 
-  // Fetch sections from BHC_Assessment collection
+  // Fetch sections
   useEffect(() => {
     async function fetchSections() {
       try {
@@ -45,6 +37,10 @@ export default function AssessmentUser() {
           ...docSnap.data(),
         }));
         setSections(sectionsData);
+        if (sectionsData.length > 0 && !selectedSection) {
+          setSelectedSection(sectionsData[0]);
+          handleSectionClick(sectionsData[0]);
+        }
       } catch (error) {
         console.error("Error fetching sections: ", error);
       }
@@ -52,7 +48,7 @@ export default function AssessmentUser() {
     fetchSections();
   }, []);
 
-  // Fetch completed sections for the current user from sectionResults collection
+  // Fetch completed sections
   async function fetchCompletedSections() {
     if (!user) return;
     try {
@@ -64,24 +60,20 @@ export default function AssessmentUser() {
       const completed = querySnapshot.docs.map(
         (docSnap) => docSnap.data().sectionName
       );
-      // Remove duplicates if any
-      const uniqueCompleted = [...new Set(completed)];
-      setCompletedSections(uniqueCompleted);
+      setCompletedSections([...new Set(completed)]);
     } catch (error) {
       console.error("Error fetching completed sections:", error);
     }
   }
 
-  // Run once on mount (and when user changes)
   useEffect(() => {
     fetchCompletedSections();
   }, [user]);
 
-  // When a section is clicked, set it as the selected section and fetch any existing submission.
+  // Handle section selection
   const handleSectionClick = async (section) => {
     setSelectedSection(section);
     setAnswers({});
-    // Fetch existing submission for the selected section (if any)
     if (user) {
       try {
         const q = query(
@@ -94,38 +86,27 @@ export default function AssessmentUser() {
         if (querySnapshot.docs.length > 0) {
           const docSnap = querySnapshot.docs[0];
           const data = docSnap.data();
-
-          // Store the original submission doc
           setExistingSubmission({ id: docSnap.id, data });
 
-          // Normalize the fetched answers so that `answers` in state
-          // only has raw values (strings or arrays of strings).
           const normalizedAnswers = {};
-
           if (section.questions && section.questions.length > 0) {
             section.questions.forEach((qItem) => {
               const storedAnswer = data.answers[qItem.id];
               if (!storedAnswer) return;
 
               if (qItem.type === "multipleChoice") {
-                // storedAnswer is something like: { answer: "Yes", weight: 2 }
                 normalizedAnswers[qItem.id] = storedAnswer.answer;
               } else if (qItem.type === "multipleSelect") {
-                // storedAnswer is an array of objects: [{ answer: "Option A", weight: 1 }, ...]
-                if (Array.isArray(storedAnswer)) {
-                  normalizedAnswers[qItem.id] = storedAnswer.map((a) => a.answer);
-                } else {
-                  normalizedAnswers[qItem.id] = [];
-                }
+                normalizedAnswers[qItem.id] = Array.isArray(storedAnswer)
+                  ? storedAnswer.map((a) => a.answer)
+                  : [];
               } else {
-                // e.g. text input => { answer: "some text", weight: null }
                 normalizedAnswers[qItem.id] = storedAnswer.answer;
               }
             });
           }
-
           setAnswers(normalizedAnswers);
-          setIsEditMode(false); // Show read-only view by default
+          setIsEditMode(false);
         } else {
           setExistingSubmission(null);
           setIsEditMode(true);
@@ -134,38 +115,35 @@ export default function AssessmentUser() {
         console.error("Error fetching submission for section:", error);
       }
     }
+    setMobileSideContentOpen(false);
   };
 
-  // For text and other default inputs
+  // Answer handlers
   const handleTextAnswerChange = (questionId, value) => {
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
   };
 
-  // For multipleChoice: radio button change
   const handleRadioAnswerChange = (questionId, value) => {
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
   };
 
-  // For multipleSelect: update an array of selected options
   const handleCheckboxAnswerChange = (questionId, optionLabel) => {
     setAnswers((prev) => {
       const current = prev[questionId] || [];
-      if (current.includes(optionLabel)) {
-        return { ...prev, [questionId]: current.filter((item) => item !== optionLabel) };
-      } else {
-        return { ...prev, [questionId]: [...current, optionLabel] };
-      }
+      return {
+        ...prev,
+        [questionId]: current.includes(optionLabel)
+          ? current.filter((item) => item !== optionLabel)
+          : [...current, optionLabel],
+      };
     });
   };
 
-  // Handle submission (both new and updates)
+  // Handle submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // Check that every question has been answered.
     const unanswered = selectedSection.questions.filter((q) => {
       const ans = answers[q.id];
-      // For multipleSelect, ensure there's at least one option
       return q.type === "multipleSelect" ? !ans || ans.length === 0 : !ans || ans === "";
     });
 
@@ -179,51 +157,41 @@ export default function AssessmentUser() {
       return;
     }
 
-    // Process answers and attach weight information if applicable
     let processedAnswers = {};
-    let sectionScore = 0; // Sum of weights for the section
+    let sectionScore = 0;
     selectedSection.questions.forEach((q) => {
       const ans = answers[q.id];
       if (q.type === "multipleChoice") {
         const option = q.options.find((o) => o.label === ans);
         const weight = option ? option.weight : 0;
         sectionScore += weight;
-        processedAnswers[q.id] = {
-          answer: ans,
-          weight: weight,
-        };
+        processedAnswers[q.id] = { answer: ans, weight };
       } else if (q.type === "multipleSelect") {
         processedAnswers[q.id] = ans.map((a) => {
           const option = q.options.find((o) => o.label === a);
           const weight = option ? option.weight : 0;
           sectionScore += weight;
-          return { answer: a, weight: weight };
+          return { answer: a, weight };
         });
       } else {
-        processedAnswers[q.id] = {
-          answer: ans,
-          weight: 0,
-        };
+        processedAnswers[q.id] = { answer: ans, weight: 0 };
       }
     });
 
-    // Prepare the submission object with computed section score
     const submission = {
       userId: user.uid,
       userEmail: user.email,
       submittedAt: serverTimestamp(),
       sectionName: selectedSection.title,
       answers: processedAnswers,
-      sectionScore: sectionScore, // New field for section score
+      sectionScore,
     };
 
     try {
       if (existingSubmission) {
-        // Update the existing document
         await updateDoc(doc(db, "sectionResults", existingSubmission.id), submission);
         alert("Your answers have been updated successfully!");
       } else {
-        // Create a new submission
         const newDoc = await addDoc(collection(db, "sectionResults"), submission);
         alert("Your answers have been submitted successfully!");
         setExistingSubmission({ id: newDoc.id, data: submission });
@@ -231,14 +199,9 @@ export default function AssessmentUser() {
       fetchCompletedSections();
       setIsEditMode(false);
 
-      // Now update the user's computedScores in the "users" collection
       const userDocRef = doc(db, "users", user.uid);
       const userDocSnap = await getDoc(userDocRef);
-      let userData = {};
-      if (userDocSnap.exists()) {
-        userData = userDocSnap.data();
-      }
-      // Initialize computedScores map if it doesn't exist
+      let userData = userDocSnap.exists() ? userDocSnap.data() : {};
       let computedScores = userData.computedScores || {
         foundationalStructure: { sections: {}, total: 0 },
         financialPosition: { sections: {}, total: 0 },
@@ -247,10 +210,7 @@ export default function AssessmentUser() {
         general: { sections: {}, total: 0 },
       };
 
-      // Determine the section number (assuming it's stored in selectedSection.order)
       const sectionNumber = selectedSection.order;
-
-      // Define category mapping: which sections belong to which categories
       const categoryMapping = {
         foundationalStructure: [2, 3, 5, 6, 7],
         financialPosition: [4, 8, 11, 12, 16, 17, 18],
@@ -259,22 +219,16 @@ export default function AssessmentUser() {
         general: [20, 21],
       };
 
-      // Update computedScores for categories that include this section
       Object.keys(categoryMapping).forEach((categoryKey) => {
         if (categoryMapping[categoryKey].includes(sectionNumber)) {
-          // Update the score for this section in the category
           computedScores[categoryKey].sections[sectionNumber] = sectionScore;
-          // Recalculate the total score for this category
-          const totalScore = Object.values(computedScores[categoryKey].sections).reduce(
-            (sum, val) => sum + (val || 0),
-            0
-          );
-          computedScores[categoryKey].total = totalScore;
+          computedScores[categoryKey].total = Object.values(
+            computedScores[categoryKey].sections
+          ).reduce((sum, val) => sum + (val || 0), 0);
         }
       });
 
-      // Update the user document with the new computedScores
-      await updateDoc(userDocRef, { computedScores: computedScores });
+      await updateDoc(userDocRef, { computedScores });
     } catch (error) {
       console.error("Error submitting/updating answers:", error);
       alert("There was an error submitting your answers. Please try again.");
@@ -282,141 +236,145 @@ export default function AssessmentUser() {
   };
 
   return (
-    <div className="overflow-x-hidden bg-[#101b31] min-h-screen">
-      {/* Mobile Toggle for Side Content */}
-      <div className="w-full bg-gray-50 p-4 lg:hidden lg:p-8 dark:bg-gray-800/25">
-        <button
-          onClick={() => setMobileSideContentOpen(!mobileSideContentOpen)}
-          type="button"
-          className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-800 hover:border-gray-300 hover:text-gray-900 hover:shadow-xs focus:ring-3 focus:ring-gray-300/25 active:border-gray-200 active:shadow-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-gray-600 dark:hover:text-gray-200 dark:focus:ring-gray-600/40 dark:active:border-gray-700"
-        >
-          Toggle Side Content
-        </button>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-gray-100">
+      {/* Header */}
+      <header className="bg-white shadow-lg p-6 sticky top-0 z-10 rounded-2xl">
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
+            Business Health Check Assessment
+          </h1>
+          <button
+            onClick={() => setMobileSideContentOpen(!mobileSideContentOpen)}
+            className="lg:hidden p-2 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 transition-colors"
+          >
+            {mobileSideContentOpen ? "Close" : "Sections"}
+          </button>
+        </div>
+      </header>
 
-      {/* Layout: Left (Side) and Right (Main) Content */}
-      <div className="flex flex-col lg:flex-row">
-        {/* Left Side Content */}
-        <div
-          className={`w-full flex-none p-4 lg:w-80 lg:p-8 xl:w-96 dark:bg-gray-800/25 ${
-            mobileSideContentOpen ? "" : "hidden"
-          } lg:block`}
+      <div className="max-w-7xl mx-auto flex flex-col lg:flex-row p-6 gap-6">
+        {/* Sidebar */}
+        <aside
+          className={`w-full lg:w-80 Bg-[#101b31] backdrop-blur-sm rounded-2xl p-6 transition-all duration-300 ${
+            mobileSideContentOpen ? "block" : "hidden lg:block"
+          }`}
         >
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-gray-100">Sections</h2>
+          <h2 className="text-xl font-semibold text-white mb-4">Assessment Sections</h2>
+          {/* Progress Indicator */}
+          <div className="mt-6 mb-6">
+            <div className="text-sm font-medium text-white mb-2">
+              Progress: {completedSections.length}/{sections.length} sections
+            </div>
+            <div className="w-full bg-gray-700 h-2 rounded-full">
+              <div
+                className="bg-emerald-500 h-2 rounded-full transition-all duration-500"
+                style={{
+                  width: `${(completedSections.length / sections.length) * 100}%`,
+                }}
+              />
+            </div>
           </div>
-          <div className="overflow-y-auto max-h-[calc(100vh-200px)]">
+          <div className="space-y-3">
             {sections.length > 0 ? (
               sections.map((section) => {
-                // Check if the current section is completed by the user
                 const isCompleted = completedSections.includes(section.title);
+                const isActive = selectedSection?.id === section.id;
                 return (
                   <div
                     key={section.id}
                     onClick={() => handleSectionClick(section)}
-                    className={`w-full rounded-lg shadow p-4 mb-4 cursor-pointer relative border ${
-                      isCompleted
-                        ? "border-green-500 bg-green-100"
-                        : "border-gray-200 dark:border-gray-600 bg-white"
-                    }`}
+                    className={`p-4 rounded-lg cursor-pointer transition-all duration-200 ${
+                      isActive
+                        ? "bg-emerald-500/20 border-emerald-500 border"
+                        : isCompleted
+                        ? "bg-green-500/10 border-green-500 border"
+                        : "bg-gray-700/50 border-gray-600 border"
+                    } hover:bg-gray-600/70`}
                   >
-                    <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">
-                      {section.title}
-                    </h2>
-                    <p className="text-sm text-gray-500 dark:text-gray-300">
-                      {section.questions ? section.questions.length : 0} questions
-                    </p>
-                    {/* Status Icon and Text in Bottom Right */}
-                    <span
-                      className={`absolute bottom-2 right-2 flex items-center ${
-                        isCompleted ? "text-green-600" : "text-red-600"
-                      }`}
-                    >
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-sm font-medium text-white">{section.title}</h3>
                       {isCompleted ? (
-                        <>
-                          <span className="mr-1">➤</span>
-                          <span>Completed</span>
-                        </>
+                        <span className="text-green-400 text-xs">✓ Completed</span>
                       ) : (
-                        <>
-                          <span className="mr-1">❌</span>
-                          <span>Not Completed</span>
-                        </>
+                        <span className="text-gray-400 text-xs">Pending</span>
                       )}
-                    </span>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {section.questions?.length || 0} questions
+                    </p>
                   </div>
                 );
               })
             ) : (
-              <p className="text-gray-500 dark:text-gray-300">No sections found</p>
+              <p className="text-gray-400 text-sm">Loading sections...</p>
             )}
           </div>
-        </div>
+        </aside>
 
         {/* Main Content */}
-        <div className="mx-auto flex w-full max-w-screen-xl grow flex-col p-4 lg:p-8 min-w-0">
+        <main className="flex-1 bg-white rounded-2xl shadow-xl p-8">
           {selectedSection ? (
-            <div>
-              {/* Display beginning text (instructions) if available */}
+            <div className="space-y-6">
+              {/* Section Header */}
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-bold text-gray-900 tracking-tight">
+                  {selectedSection.title}
+                </h2>
+                {existingSubmission && !isEditMode && (
+                  <button
+                    onClick={() => setIsEditMode(true)}
+                    className="px-4 py-1.5 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors text-sm"
+                  >
+                    Edit Answers
+                  </button>
+                )}
+              </div>
               {selectedSection.beginningText && (
-                <div className="mb-4 p-4 bg-gray-100 dark:bg-gray-700 rounded">
-                  <p className="text-gray-800 dark:text-gray-100">
-                    {selectedSection.beginningText}
-                  </p>
+                <div className="mt-4 p-4 bg-gray-50 rounded-lg text-gray-600">
+                  {selectedSection.beginningText}
                 </div>
               )}
 
               {selectedSection.questions && selectedSection.questions.length > 0 ? (
                 <>
-                  {/* Read-Only View if a submission exists and not editing */}
                   {existingSubmission && !isEditMode ? (
-                    <div>
+                    // Read-Only View
+                    <div className="space-y-4">
                       {selectedSection.questions.map((question, qIndex) => (
                         <div
                           key={question.id || qIndex}
-                          className="p-4 bg-white dark:bg-gray-700 rounded-lg shadow mb-4"
+                          className="p-6 bg-gray-50 rounded-lg border border-gray-100"
                         >
-                          <p className="font-bold text-gray-800 dark:text-gray-100">
-                            {`Question ${qIndex + 1}: ${question.text}`}
+                          <p className="font-semibold text-gray-900">
+                            {qIndex + 1}. {question.text}
                           </p>
-                          <p className="text-gray-800 dark:text-gray-100">
-                            Answer:{" "}
-                            {(() => {
-                              const ans = answers[question.id];
-                              if (Array.isArray(ans)) {
-                                // multipleSelect: array of strings
-                                return ans.join(", ");
-                              } else {
-                                // multipleChoice or text input: string
-                                return ans;
-                              }
-                            })()}
+                          <p className="mt-2 text-gray-600">
+                            <span className="font-medium">Your Answer:</span>{" "}
+                            {Array.isArray(answers[question.id])
+                              ? answers[question.id].join(", ")
+                              : answers[question.id] || "No answer provided"}
                           </p>
                         </div>
                       ))}
-                      <button
-                        onClick={() => setIsEditMode(true)}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg"
-                      >
-                        Edit Answers
-                      </button>
                     </div>
                   ) : (
                     // Editable Form
-                    <form className="space-y-6" onSubmit={handleSubmit}>
+                    <form onSubmit={handleSubmit} className="space-y-6">
                       {selectedSection.questions.map((question, qIndex) => (
                         <div
                           key={question.id || qIndex}
-                          className="p-4 bg-white dark:bg-gray-700 rounded-lg shadow mb-4"
+                          className="p-6 bg-gray-50 rounded-lg border border-gray-100"
                         >
-                          <p className="font-bold text-gray-800 dark:text-gray-100">
-                            {`Question ${qIndex + 1}: ${question.text}`}
+                          <p className="font-semibold text-gray-900 mb-3">
+                            {qIndex + 1}. {question.text}
                           </p>
-                          {/* Render answer input based on question type */}
                           {question.type === "multipleChoice" && question.options ? (
-                            <div className="mt-2">
+                            <div className="space-y-2">
                               {question.options.map((option, oIndex) => (
-                                <div key={oIndex} className="flex items-center mt-1">
+                                <label
+                                  key={oIndex}
+                                  className="flex items-center cursor-pointer p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                                >
                                   <input
                                     type="radio"
                                     name={`question-${question.id}`}
@@ -425,82 +383,93 @@ export default function AssessmentUser() {
                                     onChange={(e) =>
                                       handleRadioAnswerChange(question.id, e.target.value)
                                     }
-                                    className="mr-2"
+                                    className="w-4 h-4 text-emerald-500 focus:ring-emerald-400"
                                   />
-                                  <label className="text-gray-800 dark:text-gray-100">
-                                    {option.label}
-                                  </label>
-                                </div>
+                                  <span className="ml-3 text-gray-700">{option.label}</span>
+                                </label>
                               ))}
                             </div>
                           ) : question.type === "multipleSelect" && question.options ? (
-                            <div className="mt-2">
+                            <div className="space-y-2">
                               {question.options.map((option, oIndex) => (
-                                <div key={oIndex} className="flex items-center mt-1">
+                                <label
+                                  key={oIndex}
+                                  className="flex items-center cursor-pointer p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                                >
                                   <input
                                     type="checkbox"
                                     name={`question-${question.id}`}
                                     value={option.label}
                                     checked={
-                                      answers[question.id] &&
-                                      answers[question.id].includes(option.label)
+                                      answers[question.id]?.includes(option.label) || false
                                     }
                                     onChange={() =>
                                       handleCheckboxAnswerChange(question.id, option.label)
                                     }
-                                    className="mr-2"
+                                    className="w-4 h-4 text-emerald-500 focus:ring-emerald-400"
                                   />
-                                  <label className="text-gray-800 dark:text-gray-100">
-                                    {option.label}
-                                  </label>
-                                </div>
+                                  <span className="ml-3 text-gray-700">{option.label}</span>
+                                </label>
                               ))}
                             </div>
                           ) : (
-                            <div className="mt-2">
-                              <input
-                                type="text"
-                                name={`question-${question.id}`}
-                                value={answers[question.id] || ""}
-                                onChange={(e) =>
-                                  handleTextAnswerChange(question.id, e.target.value)
-                                }
-                                className="w-full p-2 border border-gray-300 rounded-lg"
-                                placeholder="Your answer"
-                              />
-                            </div>
+                            <input
+                              type="text"
+                              name={`question-${question.id}`}
+                              value={answers[question.id] || ""}
+                              onChange={(e) =>
+                                handleTextAnswerChange(question.id, e.target.value)
+                              }
+                              className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-500"
+                              placeholder="Your answer"
+                            />
                           )}
                         </div>
                       ))}
-                      {/* Display ending text if available */}
                       {selectedSection.endingText && (
-                        <div className="mt-4 p-4 bg-gray-100 dark:bg-gray-700 rounded">
-                          <p className="text-gray-800 dark:text-gray-100">
-                            {selectedSection.endingText}
-                          </p>
+                        <div className="p-4 bg-gray-50 rounded-lg text-gray-600">
+                          {selectedSection.endingText}
                         </div>
                       )}
-                      <button
-                        type="submit"
-                        className="px-4 py-2 bg-green-600 text-white rounded-lg"
-                      >
-                        {existingSubmission ? "Save" : "Submit Answers"}
-                      </button>
+                      <div className="flex justify-end gap-4">
+                        {existingSubmission && (
+                          <button
+                            type="button"
+                            onClick={() => setIsEditMode(false)}
+                            className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        )}
+                        <button
+                          type="submit"
+                          className="px-6 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors"
+                        >
+                          {existingSubmission ? "Save Changes" : "Submit Answers"}
+                        </button>
+                      </div>
                     </form>
                   )}
                 </>
               ) : (
-                <p className="text-gray-500 dark:text-gray-300">
-                  No questions in this section.
+                <p className="text-gray-500 text-center py-8">
+                  No questions available for this section.
                 </p>
               )}
             </div>
           ) : (
-            <div className="flex items-center justify-center rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 py-64 text-gray-400 dark:border-gray-700 dark:bg-gray-800">
-              Select a section to take the quiz
+            <div className="flex items-center justify-center h-full text-gray-500">
+              <div className="text-center py-16">
+                <h3 className="text-xl font-semibold text-gray-900">
+                  Welcome to the BHC Assessment
+                </h3>
+                <p className="mt-2 text-gray-600">
+                  Select a section from the sidebar to begin evaluating your business.
+                </p>
+              </div>
             </div>
           )}
-        </div>
+        </main>
       </div>
     </div>
   );
