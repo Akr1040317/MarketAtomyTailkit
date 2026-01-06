@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { getAuth } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "./firebaseConfig";
 import { processComputedScores } from "./utils/analytics";
+import { generateActionItems, getRecommendedResources } from "./utils/reportContent";
 import HealthLevelBadge from "./components/Reports/HealthLevelBadge";
 
 // Constants for category configuration
@@ -70,16 +71,21 @@ const RoadmapStep = ({ step, label, isActive }) => (
 export default function Dashboard({ onNavigateToReports }) {
   const [computedScores, setComputedScores] = useState(null);
   const [enhancedScores, setEnhancedScores] = useState(null);
+  const [completedSections, setCompletedSections] = useState([]);
+  const [totalSections, setTotalSections] = useState(0);
+  const [lastUpdated, setLastUpdated] = useState(null);
   const auth = getAuth();
   const user = auth.currentUser;
 
-  // Fetch user's computed scores
+  // Fetch user's computed scores and progress
   useEffect(() => {
-    const fetchUserScores = async () => {
+    const fetchUserData = async () => {
       if (!user) return;
       try {
+        // Fetch user document
         const userDocRef = doc(db, "users", user.uid);
         const userDocSnap = await getDoc(userDocRef);
+        
         if (userDocSnap.exists()) {
           const userData = userDocSnap.data();
           const rawScores = userData.computedScores || {};
@@ -88,18 +94,116 @@ export default function Dashboard({ onNavigateToReports }) {
           // Process scores with analytics
           const processed = processComputedScores(rawScores);
           setEnhancedScores(processed);
+          
+          // Get last updated timestamp
+          if (userData.overallHealth?.lastCalculated) {
+            setLastUpdated(userData.overallHealth.lastCalculated.toDate());
+          }
         }
+
+        // Fetch completed sections
+        const sectionResultsQuery = query(
+          collection(db, "sectionResults"),
+          where("userId", "==", user.uid)
+        );
+        const sectionResultsSnapshot = await getDocs(sectionResultsQuery);
+        const completed = sectionResultsSnapshot.docs.map(
+          (docSnap) => docSnap.data().sectionName
+        );
+        setCompletedSections([...new Set(completed)]);
+
+        // Fetch total sections count
+        const sectionsQuery = query(collection(db, "BHC_Assessment"));
+        const sectionsSnapshot = await getDocs(sectionsQuery);
+        setTotalSections(sectionsSnapshot.size);
       } catch (error) {
-        console.error("Error fetching user scores:", error);
+        console.error("Error fetching user data:", error);
       }
     };
 
-    fetchUserScores();
+    fetchUserData();
   }, [user]);
 
   // Get analytics for a category
   const getAnalytics = (categoryKey) =>
     enhancedScores?.[categoryKey] || null;
+
+  // Calculate assessment completion percentage
+  const completionPercentage = totalSections > 0 
+    ? Math.round((completedSections.length / totalSections) * 100)
+    : 0;
+
+  // Check if assessment is completed
+  const isAssessmentComplete = completedSections.length === totalSections && totalSections > 0;
+
+  // Get priority action items
+  const actionItems = enhancedScores ? generateActionItems(enhancedScores) : [];
+  
+  // Get top recommended resources (limit to 3)
+  const recommendedResources = enhancedScores 
+    ? getRecommendedResources(enhancedScores).slice(0, 3)
+    : [];
+
+  // Generate dynamic next steps based on assessment status and scores
+  const getNextSteps = () => {
+    if (!isAssessmentComplete) {
+      return [
+        `Complete remaining ${totalSections - completedSections.length} assessment sections`,
+        "Review your answers for accuracy",
+        "Submit all sections to generate your full report"
+      ];
+    }
+
+    if (actionItems.length > 0) {
+      return actionItems.slice(0, 3).map((item, index) => {
+        const categoryLabel = item.categoryLabel;
+        if (item.resources && item.resources.length > 0) {
+          return `Focus on ${categoryLabel}: ${item.resources[0].title}`;
+        }
+        return `Address ${categoryLabel} - Review recommendations in full report`;
+      });
+    }
+
+    // If all categories are healthy
+    if (enhancedScores?.overallHealth?.healthLevel === 'high') {
+      return [
+        "Maintain your strong business foundation",
+        "Explore growth opportunities and expansion",
+        "Schedule periodic reassessments to track progress"
+      ];
+    }
+
+    return [
+      "Review your comprehensive report for detailed insights",
+      "Schedule an Assessment Debrief with a coach",
+      "Implement recommended action items from your report"
+    ];
+  };
+
+  // Determine roadmap progress
+  const getRoadmapProgress = () => {
+    if (!isAssessmentComplete) {
+      return [
+        { step: 1, label: "Assessment", active: completedSections.length > 0 },
+        { step: 2, label: "Analysis", active: false },
+        { step: 3, label: "Strategy", active: false },
+        { step: 4, label: "Implementation", active: false },
+        { step: 5, label: "Growth", active: false },
+      ];
+    }
+
+    // Assessment complete, show progress based on scores
+    const overallHealth = enhancedScores?.overallHealth;
+    const hasLowScores = actionItems.length > 0;
+    
+    return [
+      { step: 1, label: "Assessment", active: true },
+      { step: 2, label: "Analysis", active: true },
+      { step: 3, label: "Strategy", active: hasLowScores || overallHealth?.healthLevel !== 'high' },
+      { step: 4, label: "Implementation", active: false },
+      { step: 5, label: "Growth", active: false },
+    ];
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-gray-100 p-6 lg:p-12">
@@ -117,13 +221,38 @@ export default function Dashboard({ onNavigateToReports }) {
             comprehensive analysis identifies strengths and gaps, providing
             actionable recommendations to drive growth and customer engagement.
           </p>
-          <div className="mt-7 flex items-center space-x-4">
-            <span className="bg-emerald-500 text-white px-5 py-2 rounded-full text-base font-semibold shadow-sm">
-              Assessment Completed
-            </span>
-            <span className="text-base text-gray-500">
-              Last Updated: Jan 15, 2025
-            </span>
+          <div className="mt-7 flex flex-wrap items-center gap-4">
+            {isAssessmentComplete ? (
+              <span className="bg-emerald-500 text-white px-5 py-2 rounded-full text-base font-semibold shadow-sm">
+                Assessment Completed
+              </span>
+            ) : (
+              <span className="bg-yellow-500 text-white px-5 py-2 rounded-full text-base font-semibold shadow-sm">
+                Assessment In Progress ({completionPercentage}%)
+              </span>
+            )}
+            {lastUpdated && (
+              <span className="text-base text-gray-500">
+                Last Updated: {lastUpdated.toLocaleDateString('en-US', {
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric'
+                })}
+              </span>
+            )}
+            {!isAssessmentComplete && (
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  // Navigate to assessment
+                  window.location.hash = "#assessment";
+                }}
+                className="text-emerald-600 hover:text-emerald-700 font-semibold underline"
+              >
+                Continue Assessment →
+              </a>
+            )}
           </div>
         </section>
 
@@ -172,12 +301,25 @@ export default function Dashboard({ onNavigateToReports }) {
               Detailed Insights
             </h2>
             <p className="mt-3 text-lg text-gray-600 leading-relaxed">
-              {enhancedScores ? (
+              {isAssessmentComplete && enhancedScores ? (
                 <>
-                  Click "View Full Report" above or navigate to the Reports page 
-                  to see comprehensive analysis, category-by-category breakdown, 
-                  priority action items, and recommended resources tailored to your 
-                  assessment scores.
+                  {actionItems.length > 0 ? (
+                    <>
+                      Your assessment reveals <strong>{actionItems.length} priority area{actionItems.length > 1 ? 's' : ''}</strong> that need immediate attention. 
+                      Click "View Full Report" above to see comprehensive analysis, category-by-category breakdown, 
+                      and actionable recommendations tailored to your scores.
+                    </>
+                  ) : (
+                    <>
+                      Your business shows strong health across all categories! 
+                      Click "View Full Report" above to see detailed insights and explore growth opportunities.
+                    </>
+                  )}
+                </>
+              ) : enhancedScores ? (
+                <>
+                  You've completed {completedSections.length} of {totalSections} sections. 
+                  Complete your assessment to unlock comprehensive insights and personalized recommendations.
                 </>
               ) : (
                 "Complete your assessment to see detailed insights and recommendations."
@@ -189,19 +331,15 @@ export default function Dashboard({ onNavigateToReports }) {
               Next Steps
             </h2>
             <div className="bg-gray-800/50 backdrop-blur-sm p-7 rounded-xl text-gray-100 space-y-5">
-              {[
-                "Schedule Marketing Strategy Session",
-                "Complete Product Analysis",
-                "Finalize Assessment Review",
-              ].map((step, index) => (
+              {getNextSteps().map((step, index) => (
                 <div
                   key={index}
-                  className="flex items-center text-base font-medium transition-colors hover:text-emerald-400"
+                  className="flex items-start text-base font-medium transition-colors hover:text-emerald-400"
                 >
-                  <span className="mr-4 text-emerald-400 font-bold text-lg">
+                  <span className="mr-4 text-emerald-400 font-bold text-lg flex-shrink-0">
                     {index + 1}.
                   </span>
-                  <span>{step}</span>
+                  <span className="leading-relaxed">{step}</span>
                 </div>
               ))}
             </div>
@@ -214,13 +352,7 @@ export default function Dashboard({ onNavigateToReports }) {
             Your Growth Roadmap
           </h2>
           <div className="bg-gray-800/50 backdrop-blur-sm p-10 rounded-xl flex items-center justify-between relative">
-            {[
-              { step: 1, label: "Assessment", active: true },
-              { step: 2, label: "Analysis", active: true },
-              { step: 3, label: "Strategy", active: true },
-              { step: 4, label: "Implementation", active: false },
-              { step: 5, label: "Growth", active: false },
-            ].map(({ step, label, active }, index, arr) => (
+            {getRoadmapProgress().map(({ step, label, active }, index, arr) => (
               <React.Fragment key={step}>
                 <RoadmapStep step={step} label={label} isActive={active} />
                 {index < arr.length - 1 && (
@@ -238,35 +370,69 @@ export default function Dashboard({ onNavigateToReports }) {
         </section>
 
         {/* Resources Section */}
-        <section>
-          <h2 className="text-3xl font-bold text-white mb-6 tracking-tight">
-            Recommended Resources
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[
-              {
-                title: "Customer Magnet Series",
-                desc: "5-step vision clarification video series",
-              },
-              {
-                title: "Side Hustle Guide",
-                desc: "Essential steps to maximize your hustle",
-              },
-              {
-                title: "Strategy Session",
-                desc: "Work with a mentor to finalize your plan",
-              },
-            ].map(({ title, desc }) => (
-              <div
-                key={title}
-                className="bg-gray-800/50 backdrop-blur-sm p-8 rounded-xl text-gray-100 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:bg-gray-700/50"
-              >
-                <h3 className="font-semibold text-xl text-white">{title}</h3>
-                <p className="text-base text-gray-300 mt-3 leading-relaxed">{desc}</p>
+        {recommendedResources.length > 0 && (
+          <section>
+            <h2 className="text-3xl font-bold text-white mb-6 tracking-tight">
+              Recommended Resources
+            </h2>
+            <p className="text-gray-400 mb-6">
+              Based on your assessment results, here are resources tailored to your business needs:
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+              {recommendedResources.map((resource, index) => (
+                <a
+                  key={index}
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    // Navigate to resources page
+                    if (onNavigateToReports) {
+                      // Could add a way to navigate to resources specifically
+                    }
+                  }}
+                  className="bg-gray-800/50 backdrop-blur-sm p-8 rounded-xl text-gray-100 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:bg-gray-700/50 border border-gray-700 hover:border-emerald-500"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <h3 className="font-semibold text-xl text-white">{resource.title}</h3>
+                    <svg
+                      className="w-5 h-5 text-gray-400 flex-shrink-0"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 5l7 7-7 7"
+                      />
+                    </svg>
+                  </div>
+                  <p className="text-base text-gray-300 mt-3 leading-relaxed">{resource.description}</p>
+                  <div className="mt-4">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-300">
+                      {resource.type}
+                    </span>
+                  </div>
+                </a>
+              ))}
+            </div>
+            {recommendedResources.length >= 3 && (
+              <div className="mt-6 text-center">
+                <a
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    // Navigate to resources page - would need to add this functionality
+                  }}
+                  className="text-emerald-400 hover:text-emerald-300 font-semibold underline"
+                >
+                  View All Resources →
+                </a>
               </div>
-            ))}
-          </div>
-        </section>
+            )}
+          </section>
+        )}
       </div>
     </div>
   );

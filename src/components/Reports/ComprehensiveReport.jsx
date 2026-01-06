@@ -63,7 +63,7 @@ export default function ComprehensiveReport({ enhancedScores }) {
 
       {/* Category Breakdown */}
       <section>
-        <h2 className="text-3xl font-bold text-gray-900 mb-6">
+        <h2 className="text-3xl font-bold text-white mb-6">
           Category-by-Category Breakdown
         </h2>
         <div className="grid md:grid-cols-2 gap-6">
