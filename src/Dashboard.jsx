@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { getAuth } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "./firebaseConfig";
+import { processComputedScores } from "./utils/analytics";
+import HealthLevelBadge from "./components/Reports/HealthLevelBadge";
 
 // Constants for category configuration
 const CATEGORIES = {
@@ -30,18 +32,26 @@ const CATEGORIES = {
 const CATEGORY_ORDER = Object.keys(CATEGORIES);
 
 // Score Card Component
-const ScoreCard = ({ score, label, colorClass }) => (
-  <div className="relative flex flex-col p-6 bg-white rounded-xl shadow-lg border border-gray-100 transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
-    <div className="text-4xl font-extrabold text-gray-900">{score}%</div>
-    <div className="text-base font-medium text-gray-500 mt-2">{label}</div>
-    <div className="w-full bg-gray-100 h-3 rounded-full mt-4 overflow-hidden">
-      <div
-        className={`${colorClass} h-3 rounded-full transition-all duration-500 ease-out`}
-        style={{ width: `${score}%` }}
-      />
+const ScoreCard = ({ analytics, label, colorClass }) => {
+  const percentage = analytics?.percentage || 0;
+  const healthLevel = analytics?.healthLevel || 'low';
+  
+  return (
+    <div className="relative flex flex-col p-6 bg-white rounded-xl shadow-lg border border-gray-100 transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
+      <div className="text-4xl font-extrabold text-gray-900">{percentage}%</div>
+      <div className="text-base font-medium text-gray-500 mt-2">{label}</div>
+      <div className="mt-3">
+        <HealthLevelBadge level={healthLevel} size="sm" />
+      </div>
+      <div className="w-full bg-gray-100 h-3 rounded-full mt-4 overflow-hidden">
+        <div
+          className={`${colorClass} h-3 rounded-full transition-all duration-500 ease-out`}
+          style={{ width: `${Math.min(100, percentage)}%` }}
+        />
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 // Roadmap Step Component
 const RoadmapStep = ({ step, label, isActive }) => (
@@ -57,8 +67,9 @@ const RoadmapStep = ({ step, label, isActive }) => (
   </div>
 );
 
-export default function Dashboard() {
+export default function Dashboard({ onNavigateToReports }) {
   const [computedScores, setComputedScores] = useState(null);
+  const [enhancedScores, setEnhancedScores] = useState(null);
   const auth = getAuth();
   const user = auth.currentUser;
 
@@ -71,7 +82,12 @@ export default function Dashboard() {
         const userDocSnap = await getDoc(userDocRef);
         if (userDocSnap.exists()) {
           const userData = userDocSnap.data();
-          setComputedScores(userData.computedScores || {});
+          const rawScores = userData.computedScores || {};
+          setComputedScores(rawScores);
+          
+          // Process scores with analytics
+          const processed = processComputedScores(rawScores);
+          setEnhancedScores(processed);
         }
       } catch (error) {
         console.error("Error fetching user scores:", error);
@@ -81,9 +97,9 @@ export default function Dashboard() {
     fetchUserScores();
   }, [user]);
 
-  // Get score safely
-  const getScore = (categoryKey) =>
-    computedScores?.[categoryKey]?.total ?? 0;
+  // Get analytics for a category
+  const getAnalytics = (categoryKey) =>
+    enhancedScores?.[categoryKey] || null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-gray-100 p-6 lg:p-12">
@@ -119,19 +135,33 @@ export default function Dashboard() {
           <p className="mt-3 text-lg text-gray-600 leading-relaxed">
             Review your performance across key business areas.
           </p>
-          {!computedScores ? (
+          {!enhancedScores ? (
             <p className="mt-6 text-lg text-gray-500 animate-pulse">Loading scores...</p>
           ) : (
-            <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-8">
-              {CATEGORY_ORDER.map((key) => (
-                <ScoreCard
-                  key={key}
-                  score={getScore(key)}
-                  label={CATEGORIES[key].label}
-                  colorClass={CATEGORIES[key].color}
-                />
-              ))}
-            </div>
+            <>
+              <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-8">
+                {CATEGORY_ORDER.map((key) => (
+                  <ScoreCard
+                    key={key}
+                    analytics={getAnalytics(key)}
+                    label={CATEGORIES[key].label}
+                    colorClass={CATEGORIES[key].color}
+                  />
+                ))}
+              </div>
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={() => {
+                    if (onNavigateToReports) {
+                      onNavigateToReports();
+                    }
+                  }}
+                  className="px-6 py-3 bg-emerald-500 text-white rounded-lg font-semibold hover:bg-emerald-600 transition-colors shadow-lg hover:shadow-xl"
+                >
+                  View Full Report
+                </button>
+              </div>
+            </>
           )}
         </section>
 
@@ -142,8 +172,16 @@ export default function Dashboard() {
               Detailed Insights
             </h2>
             <p className="mt-3 text-lg text-gray-600 leading-relaxed">
-              Coming soon: In-depth analysis and recommendations tailored to your
-              scores.
+              {enhancedScores ? (
+                <>
+                  Click "View Full Report" above or navigate to the Reports page 
+                  to see comprehensive analysis, category-by-category breakdown, 
+                  priority action items, and recommended resources tailored to your 
+                  assessment scores.
+                </>
+              ) : (
+                "Complete your assessment to see detailed insights and recommendations."
+              )}
             </p>
           </div>
           <div className="md:col-span-1">

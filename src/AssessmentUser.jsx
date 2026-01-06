@@ -13,6 +13,7 @@ import {
 } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { db } from "./firebaseConfig";
+import { processComputedScores } from "./utils/analytics";
 
 export default function AssessmentUser() {
   const [mobileSideContentOpen, setMobileSideContentOpen] = useState(false);
@@ -54,11 +55,11 @@ export default function AssessmentUser() {
     try {
       const q = query(
         collection(db, "sectionResults"),
-        where("userId", "==", user.uid)
+        where("userId", "==", user.uid),
       );
       const querySnapshot = await getDocs(q);
       const completed = querySnapshot.docs.map(
-        (docSnap) => docSnap.data().sectionName
+        (docSnap) => docSnap.data().sectionName,
       );
       setCompletedSections([...new Set(completed)]);
     } catch (error) {
@@ -79,7 +80,7 @@ export default function AssessmentUser() {
         const q = query(
           collection(db, "sectionResults"),
           where("userId", "==", user.uid),
-          where("sectionName", "==", section.title)
+          where("sectionName", "==", section.title),
         );
         const querySnapshot = await getDocs(q);
 
@@ -144,7 +145,9 @@ export default function AssessmentUser() {
     e.preventDefault();
     const unanswered = selectedSection.questions.filter((q) => {
       const ans = answers[q.id];
-      return q.type === "multipleSelect" ? !ans || ans.length === 0 : !ans || ans === "";
+      return q.type === "multipleSelect"
+        ? !ans || ans.length === 0
+        : !ans || ans === "";
     });
 
     if (unanswered.length > 0) {
@@ -189,10 +192,16 @@ export default function AssessmentUser() {
 
     try {
       if (existingSubmission) {
-        await updateDoc(doc(db, "sectionResults", existingSubmission.id), submission);
+        await updateDoc(
+          doc(db, "sectionResults", existingSubmission.id),
+          submission,
+        );
         alert("Your answers have been updated successfully!");
       } else {
-        const newDoc = await addDoc(collection(db, "sectionResults"), submission);
+        const newDoc = await addDoc(
+          collection(db, "sectionResults"),
+          submission,
+        );
         alert("Your answers have been submitted successfully!");
         setExistingSubmission({ id: newDoc.id, data: submission });
       }
@@ -223,12 +232,33 @@ export default function AssessmentUser() {
         if (categoryMapping[categoryKey].includes(sectionNumber)) {
           computedScores[categoryKey].sections[sectionNumber] = sectionScore;
           computedScores[categoryKey].total = Object.values(
-            computedScores[categoryKey].sections
+            computedScores[categoryKey].sections,
           ).reduce((sum, val) => sum + (val || 0), 0);
         }
       });
 
-      await updateDoc(userDocRef, { computedScores });
+      // Process scores to add analytics (percentages, health levels)
+      const enhancedScores = processComputedScores(computedScores);
+      
+      // Update computedScores with enhanced analytics
+      Object.keys(enhancedScores).forEach((categoryKey) => {
+        if (categoryKey !== 'overallHealth' && computedScores[categoryKey]) {
+          computedScores[categoryKey] = {
+            ...computedScores[categoryKey],
+            ...enhancedScores[categoryKey],
+          };
+        }
+      });
+
+      // Add overall health if available
+      const updateData = {
+        computedScores,
+      };
+      if (enhancedScores.overallHealth) {
+        updateData.overallHealth = enhancedScores.overallHealth;
+      }
+
+      await updateDoc(userDocRef, updateData);
     } catch (error) {
       console.error("Error submitting/updating answers:", error);
       alert("There was an error submitting your answers. Please try again.");
@@ -238,43 +268,45 @@ export default function AssessmentUser() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-gray-100">
       {/* Header */}
-      <header className="bg-white shadow-lg p-6 sticky top-0 z-10 rounded-2xl">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
+      <header className="sticky top-0 z-10 rounded-2xl bg-white p-6 shadow-lg">
+        <div className="mx-auto flex max-w-7xl items-center justify-between">
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900">
             Business Health Check Assessment
           </h1>
           <button
             onClick={() => setMobileSideContentOpen(!mobileSideContentOpen)}
-            className="lg:hidden p-2 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 transition-colors"
+            className="rounded-lg bg-emerald-500 p-2 text-white transition-colors hover:bg-emerald-600 lg:hidden"
           >
             {mobileSideContentOpen ? "Close" : "Sections"}
           </button>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto flex flex-col lg:flex-row p-6 gap-6">
+      <div className="mx-auto flex max-w-7xl flex-col gap-6 p-6 lg:flex-row">
         {/* Sidebar */}
         <aside
-          className={`w-full lg:w-80 Bg-[#101b31] backdrop-blur-sm rounded-2xl p-6 transition-all duration-300 ${
+          className={`Bg-[#101b31] w-full rounded-2xl p-8 backdrop-blur-sm transition-all duration-300 lg:w-96 ${
             mobileSideContentOpen ? "block" : "hidden lg:block"
           }`}
         >
-          <h2 className="text-xl font-semibold text-white mb-4">Assessment Sections</h2>
+          <h2 className="mb-6 text-2xl font-semibold text-white">
+            Assessment Sections
+          </h2>
           {/* Progress Indicator */}
-          <div className="mt-6 mb-6">
-            <div className="text-sm font-medium text-white mb-2">
+          <div className="mt-6 mb-8">
+            <div className="mb-3 text-base font-medium text-white">
               Progress: {completedSections.length}/{sections.length} sections
             </div>
-            <div className="w-full bg-gray-700 h-2 rounded-full">
+            <div className="h-3 w-full rounded-full bg-gray-700">
               <div
-                className="bg-emerald-500 h-2 rounded-full transition-all duration-500"
+                className="h-3 rounded-full bg-emerald-500 transition-all duration-500"
                 style={{
                   width: `${(completedSections.length / sections.length) * 100}%`,
                 }}
               />
             </div>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-4">
             {sections.length > 0 ? (
               sections.map((section) => {
                 const isCompleted = completedSections.includes(section.title);
@@ -283,59 +315,64 @@ export default function AssessmentUser() {
                   <div
                     key={section.id}
                     onClick={() => handleSectionClick(section)}
-                    className={`p-4 rounded-lg cursor-pointer transition-all duration-200 ${
+                    className={`cursor-pointer rounded-lg p-5 transition-all duration-200 ${
                       isActive
-                        ? "bg-emerald-500/20 border-emerald-500 border"
+                        ? "border-2 border-emerald-500 bg-emerald-500/20"
                         : isCompleted
-                        ? "bg-green-500/10 border-green-500 border"
-                        : "bg-gray-700/50 border-gray-600 border"
+                          ? "border-2 border-green-500 bg-green-500/10"
+                          : "border-2 border-gray-600 bg-gray-700/50"
                     } hover:bg-gray-600/70`}
                   >
-                    <div className="flex justify-between items-center">
-                      <h3 className="text-sm font-medium text-white">{section.title}</h3>
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-base font-semibold text-white">
+                        {section.title}
+                      </h3>
                       {isCompleted ? (
-                        <span className="text-green-400 text-xs">✓ Completed</span>
+                        <span className="text-sm font-medium text-green-400">
+                          ✓ Completed
+                        </span>
                       ) : (
-                        <span className="text-gray-400 text-xs">Pending</span>
+                        <span className="text-sm text-gray-400">Pending</span>
                       )}
                     </div>
-                    <p className="text-xs text-gray-400 mt-1">
+                    <p className="mt-2 text-sm text-gray-400">
                       {section.questions?.length || 0} questions
                     </p>
                   </div>
                 );
               })
             ) : (
-              <p className="text-gray-400 text-sm">Loading sections...</p>
+              <p className="text-base text-gray-400">Loading sections...</p>
             )}
           </div>
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 bg-white rounded-2xl shadow-xl p-8">
+        <main className="flex-1 rounded-2xl bg-white p-8 shadow-xl">
           {selectedSection ? (
             <div className="space-y-6">
               {/* Section Header */}
-              <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold text-gray-900 tracking-tight">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold tracking-tight text-gray-900">
                   {selectedSection.title}
                 </h2>
                 {existingSubmission && !isEditMode && (
                   <button
                     onClick={() => setIsEditMode(true)}
-                    className="px-4 py-1.5 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors text-sm"
+                    className="rounded-lg bg-emerald-500 px-4 py-1.5 text-sm text-white transition-colors hover:bg-emerald-600"
                   >
                     Edit Answers
                   </button>
                 )}
               </div>
               {selectedSection.beginningText && (
-                <div className="mt-4 p-4 bg-gray-50 rounded-lg text-gray-600">
+                <div className="mt-4 rounded-lg bg-gray-50 p-4 text-gray-600">
                   {selectedSection.beginningText}
                 </div>
               )}
 
-              {selectedSection.questions && selectedSection.questions.length > 0 ? (
+              {selectedSection.questions &&
+              selectedSection.questions.length > 0 ? (
                 <>
                   {existingSubmission && !isEditMode ? (
                     // Read-Only View
@@ -343,7 +380,7 @@ export default function AssessmentUser() {
                       {selectedSection.questions.map((question, qIndex) => (
                         <div
                           key={question.id || qIndex}
-                          className="p-6 bg-gray-50 rounded-lg border border-gray-100"
+                          className="rounded-lg border border-gray-100 bg-gray-50 p-6"
                         >
                           <p className="font-semibold text-gray-900">
                             {qIndex + 1}. {question.text}
@@ -363,52 +400,68 @@ export default function AssessmentUser() {
                       {selectedSection.questions.map((question, qIndex) => (
                         <div
                           key={question.id || qIndex}
-                          className="p-6 bg-gray-50 rounded-lg border border-gray-100"
+                          className="rounded-lg border border-gray-100 bg-gray-50 p-6"
                         >
-                          <p className="font-semibold text-gray-900 mb-3">
+                          <p className="mb-3 font-semibold text-gray-900">
                             {qIndex + 1}. {question.text}
                           </p>
-                          {question.type === "multipleChoice" && question.options ? (
+                          {question.type === "multipleChoice" &&
+                          question.options ? (
                             <div className="space-y-2">
                               {question.options.map((option, oIndex) => (
                                 <label
                                   key={oIndex}
-                                  className="flex items-center cursor-pointer p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                                  className="flex cursor-pointer items-center rounded-lg p-2 transition-colors hover:bg-gray-100"
                                 >
                                   <input
                                     type="radio"
                                     name={`question-${question.id}`}
                                     value={option.label}
-                                    checked={answers[question.id] === option.label}
-                                    onChange={(e) =>
-                                      handleRadioAnswerChange(question.id, e.target.value)
+                                    checked={
+                                      answers[question.id] === option.label
                                     }
-                                    className="w-4 h-4 text-emerald-500 focus:ring-emerald-400"
+                                    onChange={(e) =>
+                                      handleRadioAnswerChange(
+                                        question.id,
+                                        e.target.value,
+                                      )
+                                    }
+                                    className="h-4 w-4 text-emerald-500 focus:ring-emerald-400"
                                   />
-                                  <span className="ml-3 text-gray-700">{option.label}</span>
+                                  <span className="ml-3 text-gray-700">
+                                    {option.label}
+                                  </span>
                                 </label>
                               ))}
                             </div>
-                          ) : question.type === "multipleSelect" && question.options ? (
+                          ) : question.type === "multipleSelect" &&
+                            question.options ? (
                             <div className="space-y-2">
                               {question.options.map((option, oIndex) => (
                                 <label
                                   key={oIndex}
-                                  className="flex items-center cursor-pointer p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                                  className="flex cursor-pointer items-center rounded-lg p-2 transition-colors hover:bg-gray-100"
                                 >
                                   <input
                                     type="checkbox"
                                     name={`question-${question.id}`}
                                     value={option.label}
                                     checked={
-                                      answers[question.id]?.includes(option.label) || false
+                                      answers[question.id]?.includes(
+                                        option.label,
+                                      ) || false
                                     }
                                     onChange={() =>
-                                      handleCheckboxAnswerChange(question.id, option.label)
+                                      handleCheckboxAnswerChange(
+                                        question.id,
+                                        option.label,
+                                      )
                                     }
-                                    className="w-4 h-4 text-emerald-500 focus:ring-emerald-400"
+                                    className="h-4 w-4 text-emerald-500 focus:ring-emerald-400"
                                   />
-                                  <span className="ml-3 text-gray-700">{option.label}</span>
+                                  <span className="ml-3 text-gray-700">
+                                    {option.label}
+                                  </span>
                                 </label>
                               ))}
                             </div>
@@ -418,16 +471,19 @@ export default function AssessmentUser() {
                               name={`question-${question.id}`}
                               value={answers[question.id] || ""}
                               onChange={(e) =>
-                                handleTextAnswerChange(question.id, e.target.value)
+                                handleTextAnswerChange(
+                                  question.id,
+                                  e.target.value,
+                                )
                               }
-                              className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-500"
+                              className="w-full rounded-lg border border-gray-200 p-3 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-400"
                               placeholder="Your answer"
                             />
                           )}
                         </div>
                       ))}
                       {selectedSection.endingText && (
-                        <div className="p-4 bg-gray-50 rounded-lg text-gray-600">
+                        <div className="rounded-lg bg-gray-50 p-4 text-gray-600">
                           {selectedSection.endingText}
                         </div>
                       )}
@@ -436,35 +492,38 @@ export default function AssessmentUser() {
                           <button
                             type="button"
                             onClick={() => setIsEditMode(false)}
-                            className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                            className="rounded-lg bg-gray-500 px-6 py-2 text-white transition-colors hover:bg-gray-600"
                           >
                             Cancel
                           </button>
                         )}
                         <button
                           type="submit"
-                          className="px-6 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors"
+                          className="rounded-lg bg-emerald-500 px-6 py-2 text-white transition-colors hover:bg-emerald-600"
                         >
-                          {existingSubmission ? "Save Changes" : "Submit Answers"}
+                          {existingSubmission
+                            ? "Save Changes"
+                            : "Submit Answers"}
                         </button>
                       </div>
                     </form>
                   )}
                 </>
               ) : (
-                <p className="text-gray-500 text-center py-8">
+                <p className="py-8 text-center text-gray-500">
                   No questions available for this section.
                 </p>
               )}
             </div>
           ) : (
-            <div className="flex items-center justify-center h-full text-gray-500">
-              <div className="text-center py-16">
+            <div className="flex h-full items-center justify-center text-gray-500">
+              <div className="py-16 text-center">
                 <h3 className="text-xl font-semibold text-gray-900">
                   Welcome to the BHC Assessment
                 </h3>
                 <p className="mt-2 text-gray-600">
-                  Select a section from the sidebar to begin evaluating your business.
+                  Select a section from the sidebar to begin evaluating your
+                  business.
                 </p>
               </div>
             </div>

@@ -1,0 +1,259 @@
+#,IP,Category,Low,High
+1,Submission ID,,,
+2,Submission Date,,,
+3,What is the name of your business?,,,
+4,Street Address,,,
+5,Street Address Line 2,,,
+6,City,,,
+7,State / Province,,,
+8,Postal / Zip Code,,,
+9,Country,,,
+10,What is the phone number for your business?,,,
+11,What is the website address for your business?,,,
+12,When did you first start your business?,,,
+13,What type of business do you have?,,,
+14,What is the legal status of your business?,,,
+15,Is this a new start up or an established business?,,,
+16,Who is the primary contact?,,,
+17,What is the best phone number for the primary contact?,,,
+18,What is the email for the primary contact?,,,
+,Section 2 - Business Preparation,,,
+19,Do you currently have a Vision Statement for your business?,Yes/No,0,2
+20,Do you currently have a Mission Statement for your business?,Yes/No,0,2
+21,Have you created a Business Model for your business?,Yes/No,0,2
+22,Have you created a Financial Model for your business?,Yes/No,0,2
+23,Have you created a Product/Service Pricing Model for your business?,Yes/No,1,2
+24,Have you created a Go-To-Market Strategy for your business,Yes/No,0,2
+25,Have you created a One-Page Investor Summary for your business,Yes/No,1,2
+26,Have you created a Private Placement memorandum (PPM) for your business,Yes/No,0,2
+27,Have you created a Forward Looking (Save Harbor) Statement for your business,Yes/No,0,2
+28,Is your business currently generating revenue?,Yes/No,0,2
+29,"If not, how long do you predict it will take to get there?",Single,0,3
+30,What are some of the key problems you see with your business right now? (Select all that apply),Multiple,-3.25,0
+31,Section 2 Summary,Totals,-1.25,23
+,Section 3 - Ownership Structure,,,
+32,Are you the sole owner of your business?,Yes/No,1,2
+33,Is there someone else you need to get approval from to make business decisions?,Yes/No,1,2
+34,"Are you or any other owners of your company women, minorities, veterans or a disabled veteran?",Yes/No,1,2
+35,Is there stock set aside for future investors and/or employees?,Yes/No,0,2
+36,Have you established any strategic alliances or partners?,Yes/No,1,3
+37,End of 3 Summary,Totals,4,11
+,Section 4 - Business Funding Position,,,
+38,"Looking generally at your business, how would you describe its financial position?",Single,1,5
+39,How has the business been financed to date? (select all that apply),Multiple,1,11
+40,How much money have you and other founders invested in the business to date?,Single,1,5
+41,Are you looking to attract additional investment funds?,Single,0,2
+42,"If so, how much are you looking to raise?",Yes/No,0,1
+43,What do you need the money for? (select all that apply)?,Multiple,1,17
+44,"How much do you presently have in immediately available funds, either already in the business or to inject into the business?",Multiple,0,4
+45,End of 4 Summary,Totals,4,45
+,Section 5 - Business Milestone Achievements,,,
+46,What Milestones have been achieved to date? (Check all that apply),Multiple,0,27
+47,What Milestones are currently in the pipeline? (Check all that apply),Multiple,0,12
+48,How are you performing toward those milestone achievements?,Multiple,1,4
+49,Are the people in place to help meet these milestones?,Yes/No,0,2
+50,What is your exit strategy?,Single,0,1
+51,End of 5 Summary,Totals,1,46
+,Section 6 - Business Structure & Organization,,,
+52,Is this a home office company or will  you need additional office space?,Single,1,4
+53,How many people do you employ in total?,Single,1,5
+54,How many people will you employ at full growth?,Single,0,4
+55,"Do you have an HR department internally, or is it outsourced?",Single,0,1
+,Is there a defined culture within your organization?,Single,1,2
+,Do you have a high turnover of employees?,Single,1,2
+,Do you have issues with team engagement among employees?,Single,1,2
+,Have you developed a policies and procedures manual?,Single,1,2
+,Do you have job descriptions in place for employees?,Single,1,2
+,Do you have an official review/discipline process in place?,Single,1,2
+,Do you have an active employee benefits plan in place?,Single,1,2
+56,"Do you have an IT department internally, or is it outsourced?",Single,0,1
+57,Will you be seeking to hire new employees over next 12 months?,Single,0,2
+58,Have you used external consultants to date?,Single,0,2
+59,Would you consider using part-time consultants to fulfill some of the key functions within the company?,Single,0,2
+60,What skill gaps do you currently feel you need to fill in order to grow your business? (Check all that apply),Multiple,-5.5,0
+61,End of 6 Summary,Totals,3.5,35
+,Section 7 - Executive Management Team,,,
+62,Do you have Executives other than yourself?,Yes/No,0,1
+63,What key executive functions are currently in place? (Check all that apply),Multiple,0,8
+64,Have any of your  Key Executives previously had successful business ventures?,Yes/No,0,2
+65,Do any of the Key Executives have Founder shares in the business?,Yes/No,0,2
+66,Have any of the Key Executives invested into the business?,Yes/No,0,2
+67,Are all executive team members direct employees of the business?,Yes/No,1,2
+68,Do you have a Board of Directors?,Yes/No,0,1
+69,Do you have an Advisory Board?,Yes/No,0,1
+70,"Do you have external professional advisors, consultants or coaches in any specific area of activity?",Yes/No,0,1
+71,End of 7 Summary,Totals,,
+,Section 8 - Products or Services,,,
+72,What do you sell?,Single,1,3
+73,How do you characterize your business?,Single,1,4
+74,"If you are a service oriented business, are you the provider/creator of your service?",Single,0,3
+75,"If you are a product oriented business, are you the manufacturer of your product?",Single,0,4
+76,Do you have an existing Minimal Viable Product (MVP) for your business,Single,0,3
+77,What is your expectation of Net Profit before Taxes?,Single,0,4
+78,"Would your products/services be considered ""must haves"" or ""like to haves""",Single,0,3
+79,Do you have to drive demand or does the market take care of it?,Single,0,3
+80,End of 8 Summary,Totals,2,27
+,Section 9 - Intellectual Property,,,
+81,Do you have any proprietary technology or manufacturing processes?,Yes/No,0,2
+82,"Do you have any patents, copyrights or trademarks filed or pending?",Yes/No,0,2
+83,Are you satisfied that your IP is being protected at the manufacturing level?,Yes/No,0,2
+84,Do you work with an established IP attorney?,Yes/No,0,2
+85,Do you suffer any issues with regard to IP infringement?,Yes/No,0,2
+86,Do you suffer problems with counterfeit products competing with you in the market?,Yes/No,-1,1
+87,End of 9 Summary,Totals,-1,11
+,Section 10 - Scalability,,,
+88,Where are your products/services currently being sold?,Single,0,3
+89,Is your business model one which will enable you to significantly scale up your business?,Yes/No,0,2
+90,How do you see the future for your business?,Single,0,3
+91,How long before  you see yourself becoming profitable?,Single,0,4
+92,Are you exploiting the company’s full potential for “Geographical” scalaability?,Yes/No,0,1
+93,Would you consider setting up a physical presence in overseas markets?,Yes/No,0,2
+94,Are you exploiting the company’s full potential for “Market” scalability?,Yes/No,0,2
+95,"Are you exploiting the company’s full potential for “Product scalability""?",Yes/No,0,2
+96,End of 10 Summary,Totals,0,19
+,Section 11 - Revenue,,,
+97,Do you currently have more than ONE revenue stream?,Yes/No,1,2
+98,Are you planning to increase the number of revenue streams?,Yes/No,0,2
+99,Are your sales patterns consistent or cyclical?,Single,0,2
+100,Are you happy with the performance of all the revenue streams?,Yes/No,0,3
+101,How realistic is it to develop additional revenue streams? (on a scale of 1 to 5),Single,0,4
+102,What are the limiting factors for developing additional revenue streams?(Check all that apply),Multiple,1,6
+103,End of 11 Sumary,,2,19
+,Section 12 - Sales,,,
+104,Where are your sales made?,Single,1,2
+105,Have you developed revenue projections for the next 2-3 years?,Yes/No,1,2
+106,How frequently do you track your performance against these projections?,Single,0,4
+107,Have you developed revenue projections for the next 3-5 years?,Yes/No,1,2
+108,Do you have an internal sales force?,Yes/No,1,2
+109,How many people in the company are responsible for making sales?,Single,0,2
+110,Are your salespeople full-time or part-time?,Single,0,5
+111,Do you have an established sales process in place?,Yes/No,0,2
+112,How are your sales personnel compensated? (Check all that apply),Multiple,0,4
+113,Is your sales team meeting defined goals?,Yes/No,0,2
+114,Do you have an in-house sales training program?,Yes/No,0,2
+115,Do your field sales people also manage ongoing customer relationships?,Yes/No,0,2
+116,How long is the sales cycle?,Single,0,3
+117,Do you export/work internationally?,Yes/No,1,2
+118,End of 12 Summary,Totals,5,36
+,Section 13 - Customer Identification,,,
+119,What percentage of your total sales is generated by your top 5 customers?,Single,0,3
+120,How would you describe your target customer list?,Single,0,5
+121,How would you describe your target market?,Single,1,4
+122,Do you have a clear profile of your ideal customer?,Yes/No,0,2
+123,Are your customers readily accessible geographically?,Yes/No,1,2
+124,Are your customers readily accessible digitally?,Yes/No,1,2
+125,Do you have previous experience successfully selling other products/services to this customer set?,Yes/No,1,2
+126,How would you rate your customer relations overall?,Single,0,4
+127,Do you get referral business from existing customers?,Yes/No,0,1
+128,End of 13 Summary,Totals,4,25
+,Section 14 - Market Dynamics,,,
+129,How well defined is the size of your market on a scale of 1 to 5?,Single,0,3
+130,Do you consider your company to have an established presence in its markets?,Yes/No,0,1
+131,How well do you feel you have penetrated those markets?,Single,0,4
+132,"Have you conducted a Strengths, Weakness, Opportunities and Threats (S.W.O.T.) analysis on your business",Yes/No,0,1
+133,Have you identified your primary competitive advantage?,Yes/No,0,1
+134,Do you have a plan to overcome your competitive disadvantages?,Yes/No,0,1
+135,Do you have serious competition?,Yes/No,0,1
+136,Are they powerhouse companies with massive resources you cannot match?,Yes/No,0,1
+137,How do your competitors see you in your markets?,Single,0,2
+138,Do you have a handle on market trends effecting your business?,Yes/No,0,1
+139,Do these represent opportunities or threats to the business in the future?,Single,0,3
+140,"Is your market need well-known, or will you be required to educate your market as to the problem the need solved first?",single,1,4
+141,End of 14 Summary,Totals,1,23
+,Section 15 - Marketing,,,
+142,Does your company have a dominant brand identity?,Yes/No,0,1
+143,Does your company have registered domain names to support its market presence?,Yes/No,0,1
+144,Does your company have a professionally designed brand logo?,Yes/No,0,1
+145,Do your products/services have clear brand identities?,Yes/No,0,1
+146,How do you perceive your company's image today?,Single,0,4
+147,"If rated low, do you know why?",Yes/No,0,1
+148,Have you made efforts to strengthen your image in the past 12 months?,Yes/No,0,1
+149,Do you have a marketing strategy incorporated into a Marketing Plan?,Yes/No,0,1
+150,How often is this marketing strategy revisited and updated?,Single,0,3
+151,Do you have an identified marketing budget?,Yes/No,0,1
+152,What percentage of total gross revenue is attributed to marketing,Single,0,4
+153,Do you have anyone specifically in charge of marketing in-house or outside?,Yes/No,0,1
+154,Is there a corporate focus on the marketing of the company?,Yes/No,0,1
+155,What are the different channels you use to promote the business currently? (Check all that apply),Multiple,0,7
+156,Are you active on social media?,Yes/No,0,1
+157,Do you have in-house expert on social media or is it outsourced?,Single,0,2
+158,Are your customers on social media?,Single,0,2
+159,End of 15 Summary,Totals,0,33
+,Section 16 - Financial Management,,,
+160,Have you been actively maintaining ongoing record keeping for financial purposes?,Yes/No,0,1
+161,Do you have internal bookkeeping capabilities?,Yes/No,0,1
+162,Do you have internal accounting staff or is it out-sourced?,Single,1,2
+163,Do you employ an external CPA or accountant to prepare tax returns?,Yes/No,0,1
+164,Do you feel you have liquidity issues or cash flow problems?,Yes/No,-1,1
+165,Do you have the bank facilities and relationships in place to support cash flows?,Yes/No,0,1
+166,Does the company carry any debt? (excluding equity investors),Yes/No,-1,1
+167,"If so, how much?",Single,1,5
+168,Are you happy with your current banking relationship?,Yes/No,0,1
+169,Is your company profitable?,Yes/No,0,1
+170,Have you reached breakeven?,Yes/No,0,1
+171,Are you able to determine if all your product or service lines make money?,Yes/No,0,1
+172,How closely do you monitor cash flows?,Single,0,3
+173,Do you have an internal financial management system that you use?,Yes/No,0,1
+174,Does your company produce annual budgets?,Yes/No,0,1
+175,Do you produce regular cash flow forecasts?,Yes/No,0,1
+176,"If so, how accurate have they proven to be to date?",Single,0,3
+177,Do you compare your actual performance against your forecasts?,Yes/No,0,2
+178,Are all your taxes filed up to date?,Yes/No,0,1
+179,End of 16 Summary,Totals,0,29
+,Section 17 - Pricing Models,,,
+180,Does the company have robust pricing models for all its products?,Yes/No,0,1
+181,Do you have a clear idea of your unit costs of production?,Yes/No,0,1
+182,Are you selling to wholesalers/ retailers/ public directly? (Check all that apply),Multiple,0,3
+183,Is your pricing model dictated by competition or by profit goals?,Single,0,2
+184,"If product based, do you offer value-added “services” in addition to the company’s offerings?",Yes/No,0,1
+185,End Section 17 Summary,Totals,0,8
+,Section 18 - Cost Controls,,,
+186,Do you consider you have a cost problem generally?,Yes/No,0,1
+187,"If so, do you know where problem lies?",Yes/No,0,1
+188,Have you tried or been able to do anything positive to turn these problems around?,Yes/No,0,1
+189,Do you have any systems in place to control costs?,Yes/No,0,1
+190,Is there a cost control culture within your company?,Yes/No,0,1
+191,End Section 18 Summary,Totals,0,5
+,Section 19 - Production,,,
+192,Are you a Manufacturing Company?,Yes/No,0,1
+193,Where are your products manufactured?,Single,0,3
+194,Are you satisfied with your manufacturing operations?,Yes/No,0,2
+195,Do you suffer from quality control issues?,Yes/No,-1,1
+196,"If manufacturing overseas, do you have a local rep looking after you?",Yes/No,0,1
+197,Are you always able to fulfill orders on time?,Yes/No,0,1
+198,Are you satisfied with your costs of production?,Yes/No,0,1
+199,Do you have problems sourcing supplies and raw materials?,Yes/No,-1,1
+200,How much control do you have over the manufacturing process?,Single,0,5
+201,Do you receive satisfactory credit terms from your suppliers?,Yes/No,0,1
+202,Are you normally able to pay creditors on time?,Yes/No,0,1
+203,Are you governed by Health & Safety or other regulatory matters?,Yes/No,0,1
+204,Are you in compliance with all appropriate regulations and laws?,Yes/No,0,1
+205,Are your company’s internal production processes robust?,Yes/No,0,2
+206,How engaged is  your company regarding new product development?,Single,0,3
+207,Is anyone responsible for new product development?,Yes/No,0,1
+208,End Section 19 Summary,Totals,-2,26
+,Section 20 - Personal Assessment,,,
+209,Are you permanently stressed out due to work issues?,Yes/No,-1,1
+210,What stressors seem to keep you up at night? (Check all that apply,Multiple,-4,1
+211,Do you feel your life/work balance is skewed in the wrong direction?,Yes/No,-1,1
+212,Are you ever able to take time out to recharge?,Yes/No,-1,1
+213,Do you have a team in place to fill in gaps when you are away?,Yes/No,0,1
+214,Do you feel the company can operate effectively in your absence?,Yes/No,0,1
+215,"Do you have ""Key Person"" Insurance or some protective measure in place if you should become incapacitated?",Yes/No,0,1
+216,Are you able to pay yourself what you think you’re worth?,Yes/No,0,1
+217,"On an hourly basis, are you the best or worst paid person in your company?",Single,1,3
+218,Do you have a “Legacy” plan in place for your business?,Yes/No,0,1
+219,Do you have a successor in mind?,Yes/No,0,1
+220,"If so, is your successor being groomed to take over?",Yes/No,0,1
+221,"Looking at your overall feelings about becoming a business owner, which answer best sums up your feelings?",Single,0,3
+222,End Section 20 Summary,Totals,-6,17
+,Section 21 - General,,,
+223,Do you see any of the following looming external threats happening that could upset your business? (Check all that apply),Multiple,-5,0
+224,Are there any internal weakness or threats that could hinder your growth as a company? (Check all that apply),Multiple,-5,0
+225,Do you see any changes externally that could create great opportunities for growth?,Yes/No,0,1
+226,Do you feel you already have the internal resources to exploit those opportunities?,Yes/No,0,1
+227,How Close is the Company to reaching it's full potential as it is right now?,Single,0,10
+228,Would it require a significant capital injection to take it to another level?,Yes/No,-1,1
+229,Would it require an enhanced team to take it there?,Yes/No,0,1
+230,End of Section 21 Summary,Totals,-11,14
+,,,-6,292
