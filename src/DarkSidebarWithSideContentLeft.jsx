@@ -91,7 +91,7 @@ export default function DarkSidebarWithSideContentLeft() {
               <img
                 src={companyLogo}
                 alt="Company Logo"
-                className="mx-auto h-8 w-auto object-contain"
+                className="mx-auto h-10 w-auto object-contain"
               />
             </a>
             {/* END Brand */}

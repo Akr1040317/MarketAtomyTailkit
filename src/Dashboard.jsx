@@ -278,7 +278,7 @@ export default function Dashboard({ onNavigateToReports, onNavigateToResources }
                   />
                 ))}
               </div>
-              <div className="mt-6 flex justify-end">
+              <div className="mt-6 flex justify-end gap-4">
                 <button
                   onClick={() => {
                     if (onNavigateToReports) {
@@ -288,6 +288,37 @@ export default function Dashboard({ onNavigateToReports, onNavigateToResources }
                   className="px-6 py-3 bg-emerald-500 text-white rounded-lg font-semibold hover:bg-emerald-600 transition-colors shadow-lg hover:shadow-xl"
                 >
                   View Full Report
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!enhancedScores) return;
+                    const { downloadPDFReport } = await import('./utils/pdfGenerator');
+                    const auth = getAuth();
+                    const user = auth.currentUser;
+                    const userDocRef = doc(db, "users", user.uid);
+                    const userDocSnap = await getDoc(userDocRef);
+                    const userData = userDocSnap.exists() ? userDocSnap.data() : {};
+                    await downloadPDFReport(enhancedScores, {
+                      firstName: userData.firstName || '',
+                      email: user?.email || '',
+                    });
+                  }}
+                  className="px-6 py-3 bg-gray-700 text-white rounded-lg font-semibold hover:bg-gray-600 transition-colors shadow-lg hover:shadow-xl flex items-center gap-2"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                  Print Full Report
                 </button>
               </div>
             </>

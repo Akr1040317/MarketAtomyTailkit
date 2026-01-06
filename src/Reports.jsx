@@ -240,7 +240,29 @@ export default function Reports() {
               <button className="bg-white text-emerald-600 px-8 py-3 rounded-lg font-semibold hover:bg-emerald-50 transition-colors shadow-lg">
                 Schedule Assessment Debrief
               </button>
-              <button className="bg-white/20 backdrop-blur-sm text-white border-2 border-white px-8 py-3 rounded-lg font-semibold hover:bg-white/30 transition-colors">
+              <button 
+                onClick={async () => {
+                  if (!enhancedScores) return;
+                  try {
+                    const { downloadPDFReport } = await import('./utils/pdfGenerator');
+                    const auth = getAuth();
+                    const user = auth.currentUser;
+                    if (user) {
+                      const userDocRef = doc(db, "users", user.uid);
+                      const userDocSnap = await getDoc(userDocRef);
+                      const userData = userDocSnap.exists() ? userDocSnap.data() : {};
+                      await downloadPDFReport(enhancedScores, {
+                        firstName: userData.firstName || '',
+                        email: user?.email || '',
+                      });
+                    }
+                  } catch (error) {
+                    console.error('Error generating PDF:', error);
+                    alert('Error generating PDF report. Please try again.');
+                  }
+                }}
+                className="bg-white/20 backdrop-blur-sm text-white border-2 border-white px-8 py-3 rounded-lg font-semibold hover:bg-white/30 transition-colors"
+              >
                 Download PDF Report
               </button>
             </div>
