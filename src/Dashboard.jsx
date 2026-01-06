@@ -68,7 +68,7 @@ const RoadmapStep = ({ step, label, isActive }) => (
   </div>
 );
 
-export default function Dashboard({ onNavigateToReports }) {
+export default function Dashboard({ onNavigateToReports, onNavigateToResources }) {
   const [computedScores, setComputedScores] = useState(null);
   const [enhancedScores, setEnhancedScores] = useState(null);
   const [completedSections, setCompletedSections] = useState([]);
@@ -385,9 +385,8 @@ export default function Dashboard({ onNavigateToReports }) {
                   href="#"
                   onClick={(e) => {
                     e.preventDefault();
-                    // Navigate to resources page
-                    if (onNavigateToReports) {
-                      // Could add a way to navigate to resources specifically
+                    if (onNavigateToResources) {
+                      onNavigateToResources();
                     }
                   }}
                   className="bg-gray-800/50 backdrop-blur-sm p-8 rounded-xl text-gray-100 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:bg-gray-700/50 border border-gray-700 hover:border-emerald-500"
@@ -423,7 +422,9 @@ export default function Dashboard({ onNavigateToReports }) {
                   href="#"
                   onClick={(e) => {
                     e.preventDefault();
-                    // Navigate to resources page - would need to add this functionality
+                    if (onNavigateToResources) {
+                      onNavigateToResources();
+                    }
                   }}
                   className="text-emerald-400 hover:text-emerald-300 font-semibold underline"
                 >

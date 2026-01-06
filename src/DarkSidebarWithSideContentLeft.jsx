@@ -5,6 +5,8 @@ import { doc, getDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import companyLogo from "./assets/companyLogo.png";
 import { Menu, MenuButton, MenuItems, MenuItem, Transition } from "@headlessui/react";
+import FeedbackModal from "./components/FeedbackModal";
+import BugReportModal from "./components/BugReportModal";
 
 // Import your separate view components
 import Dashboard from "./Dashboard.jsx";
@@ -22,6 +24,9 @@ export default function DarkSidebarWithSideContentLeft() {
   const [firstName, setFirstName] = useState("");
   // State to hold the user's role (admin, tier1, tier2, tier3, etc.)
   const [userRole, setUserRole] = useState("");
+  // Modal states
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
+  const [bugReportModalOpen, setBugReportModalOpen] = useState(false);
 
   const navigate = useNavigate();
 
@@ -86,7 +91,7 @@ export default function DarkSidebarWithSideContentLeft() {
               <img
                 src={companyLogo}
                 alt="Company Logo"
-                className="mx-auto hx-auto p-2 w-auto"
+                className="mx-auto h-8 w-auto object-contain"
               />
             </a>
             {/* END Brand */}
@@ -287,8 +292,7 @@ export default function DarkSidebarWithSideContentLeft() {
               <button
                 onClick={(e) => {
                   e.preventDefault();
-                  // Handle give feedback action
-                  alert("Feedback feature coming soon!");
+                  setFeedbackModalOpen(true);
                 }}
                 className="w-full flex items-center gap-3 rounded-lg border border-transparent px-3 py-3 text-base font-medium text-gray-200 hover:bg-gray-700/75 hover:text-white transition-all"
               >
@@ -315,8 +319,7 @@ export default function DarkSidebarWithSideContentLeft() {
               <button
                 onClick={(e) => {
                   e.preventDefault();
-                  // Handle report bug action
-                  alert("Bug report feature coming soon!");
+                  setBugReportModalOpen(true);
                 }}
                 className="w-full flex items-center gap-3 rounded-lg border border-transparent px-3 py-3 text-base font-medium text-gray-200 hover:bg-gray-700/75 hover:text-white transition-all"
               >
@@ -455,29 +458,6 @@ export default function DarkSidebarWithSideContentLeft() {
             </div>
             {/* Right Section */}
             <div className="flex items-center gap-2">
-              {/* Notifications */}
-              <a
-                href="#"
-                className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm leading-5 font-semibold text-gray-800 hover:border-gray-300 hover:text-gray-900 hover:shadow-xs focus:ring-3 focus:ring-gray-300/25 active:border-gray-200 active:shadow-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-gray-600 dark:hover:text-gray-200 dark:focus:ring-gray-600/40 dark:active:border-gray-700"
-              >
-                <svg
-                  className="hi-outline hi-bell-alert inline-block size-5"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth="1.5"
-                  stroke="currentColor"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"
-                  />
-                </svg>
-              </a>
-              {/* END Notifications */}
-
               {/* User Dropdown */}
               <Menu as="div" className="relative inline-block">
                 <MenuButton className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm leading-5 font-semibold text-gray-800 hover:border-gray-300 hover:text-gray-900 hover:shadow-xs focus:ring-3 focus:ring-gray-300/25 active:border-gray-200 active:shadow-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-gray-600 dark:hover:text-gray-200 dark:focus:ring-gray-600/40 dark:active:border-gray-700">
@@ -556,7 +536,10 @@ export default function DarkSidebarWithSideContentLeft() {
           {/* The active view now entirely manages its own side content */}
           <div className="mx-auto flex w-full max-w-10xl grow flex-col p-4 lg:p-8">
             {activeView === "dashboard" ? (
-              <Dashboard onNavigateToReports={() => setActiveView("reports")} />
+              <Dashboard 
+                onNavigateToReports={() => setActiveView("reports")}
+                onNavigateToResources={() => setActiveView("resources")}
+              />
             ) : activeView === "reports" ? (
               <Reports />
             ) : activeView === "resources" ? (
@@ -593,6 +576,10 @@ export default function DarkSidebarWithSideContentLeft() {
         {/* END Page Footer */}
       </div>
       {/* END Page Container */}
+
+      {/* Modals */}
+      <FeedbackModal isOpen={feedbackModalOpen} onClose={() => setFeedbackModalOpen(false)} />
+      <BugReportModal isOpen={bugReportModalOpen} onClose={() => setBugReportModalOpen(false)} />
     </>
   );
 }
