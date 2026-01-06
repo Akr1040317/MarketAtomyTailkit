@@ -10,7 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 import googleLogo from "./assets/google.png";
-import companyLogo from "./assets/companyLogo.png";
+import companyLogo from "./assets/MarketAtomy-HOR-300x92.png";
 import poweredBy from "./assets/poweredBy.png";
 
 export default function SignInBoxed() {

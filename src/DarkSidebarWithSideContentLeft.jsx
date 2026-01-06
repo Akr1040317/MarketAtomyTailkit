@@ -3,7 +3,7 @@ import { auth, db } from "./firebaseConfig";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
-import companyLogo from "./assets/companyLogo.png";
+import companyLogo from "./assets/MarketAtomy-HOR-300x92.png";
 import { Menu, MenuButton, MenuItems, MenuItem, Transition } from "@headlessui/react";
 import FeedbackModal from "./components/FeedbackModal";
 import BugReportModal from "./components/BugReportModal";

@@ -9,21 +9,21 @@ import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 
-import companyLogo from "./assets/companyLogo.png";
+import companyLogo from "./assets/MarketAtomy-HOR-300x92.png";
 import googleLogo from "./assets/google.png";
 import poweredBy from "./assets/poweredBy.png";
 
 export default function SignUpBoxed() {
   const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName]   = useState("");
-  const [username, setUsername]   = useState("");
-  const [email, setEmail]         = useState("");
-  const [password, setPassword]   = useState("");
+  const [lastName, setLastName] = useState("");
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [showAlert, setShowAlert]       = useState(false);
+  const [showAlert, setShowAlert] = useState(false);
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
   const [usernameAvailable, setUsernameAvailable] = useState(true);
 
@@ -68,7 +68,14 @@ export default function SignUpBoxed() {
     setErrorMessage("");
 
     // Validate that all fields are filled
-    if (!firstName || !lastName || !username || !email || !password || !confirmPassword) {
+    if (
+      !firstName ||
+      !lastName ||
+      !username ||
+      !email ||
+      !password ||
+      !confirmPassword
+    ) {
       setErrorMessage("Please fill in all fields.");
       setShowAlert(true);
       return;
@@ -88,7 +95,11 @@ export default function SignUpBoxed() {
 
     try {
       // Create user using Firebase Auth
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password,
+      );
       const user = userCredential.user;
 
       // Create a document for the user in the "users" collection
@@ -133,7 +144,7 @@ export default function SignUpBoxed() {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
-      
+
       // Split the display name (if available) into first and last names
       let parsedFirstName = "";
       let parsedLastName = "";
@@ -185,28 +196,38 @@ export default function SignUpBoxed() {
   return (
     <>
       {/* Page Container */}
-      <div id="page-container" className="mx-auto flex min-h-dvh w-full min-w-80 flex-col bg-gray-900 dark:bg-gray-900 dark:text-gray-100">
+      <div
+        id="page-container"
+        className="mx-auto flex min-h-dvh w-full min-w-80 flex-col bg-gray-900 dark:bg-gray-900 dark:text-gray-100"
+      >
         {/* Page Content */}
         <main id="page-content" className="flex max-w-full flex-auto flex-col">
-          <div className="relative mx-auto flex min-h-dvh w-full max-w-10xl items-center justify-center overflow-hidden p-4 lg:p-8">
+          <div className="max-w-10xl relative mx-auto flex min-h-dvh w-full items-center justify-center overflow-hidden p-4 lg:p-8">
             {/* Sign Up Section */}
             <section className="w-full max-w-xl py-6">
               {/* Header */}
               <header className="mb-10 text-center">
-                <img src={companyLogo} alt="Company Logo" className="mx-auto h-35 w-auto" />
+                <img
+                  src={companyLogo}
+                  alt="Company Logo"
+                  className="mx-auto h-35 w-auto"
+                />
               </header>
 
               {/* Sign Up Form */}
               <div className="flex flex-col overflow-hidden rounded-lg bg-gray-800 shadow-xs dark:bg-gray-800 dark:text-gray-100">
                 <div className="grow p-5 md:px-16 md:py-12">
-                  <h2 className="text-xl text-center font-medium text-white dark:text-gray-40 py-3">
+                  <h2 className="dark:text-gray-40 py-3 text-center text-xl font-medium text-white">
                     Create an Account
                   </h2>
                   <form onSubmit={handleSignUp} className="space-y-5">
                     {/* First & Last Name */}
                     <div className="flex space-x-4">
                       <div className="w-1/2 space-y-1">
-                        <label htmlFor="firstName" className="inline-block text-sm text-white font-medium">
+                        <label
+                          htmlFor="firstName"
+                          className="inline-block text-sm font-medium text-white"
+                        >
                           First Name
                         </label>
                         <input
@@ -220,7 +241,10 @@ export default function SignUpBoxed() {
                         />
                       </div>
                       <div className="w-1/2 space-y-1">
-                        <label htmlFor="lastName" className="inline-block text-sm text-white font-medium">
+                        <label
+                          htmlFor="lastName"
+                          className="inline-block text-sm font-medium text-white"
+                        >
                           Last Name
                         </label>
                         <input
@@ -237,7 +261,10 @@ export default function SignUpBoxed() {
 
                     {/* Username */}
                     <div className="space-y-1">
-                      <label htmlFor="username" className="inline-block text-sm text-white font-medium">
+                      <label
+                        htmlFor="username"
+                        className="inline-block text-sm font-medium text-white"
+                      >
                         Username
                       </label>
                       <input
@@ -251,16 +278,23 @@ export default function SignUpBoxed() {
                         className="block w-full rounded-lg border border-gray-200 px-5 py-3 leading-6 dark:border-gray-600 dark:bg-gray-800"
                       />
                       {username && !usernameAvailable && (
-                        <p className="text-red-500 text-sm">Username is taken</p>
+                        <p className="text-sm text-red-500">
+                          Username is taken
+                        </p>
                       )}
                       {username && usernameAvailable && (
-                        <p className="text-green-500 text-sm">Username is available</p>
+                        <p className="text-sm text-green-500">
+                          Username is available
+                        </p>
                       )}
                     </div>
 
                     {/* Email */}
                     <div className="space-y-1">
-                      <label htmlFor="email" className="inline-block text-sm text-white font-medium">
+                      <label
+                        htmlFor="email"
+                        className="inline-block text-sm font-medium text-white"
+                      >
                         Email
                       </label>
                       <input
@@ -276,7 +310,10 @@ export default function SignUpBoxed() {
 
                     {/* Password */}
                     <div className="space-y-1">
-                      <label htmlFor="password" className="inline-block text-sm text-white font-medium">
+                      <label
+                        htmlFor="password"
+                        className="inline-block text-sm font-medium text-white"
+                      >
                         Password
                       </label>
                       <div className="relative">
@@ -289,7 +326,10 @@ export default function SignUpBoxed() {
                           onChange={(e) => setPassword(e.target.value)}
                           className="block w-full rounded-lg border border-gray-200 px-5 py-3 leading-6 dark:border-gray-600 dark:bg-gray-800"
                         />
-                        <span className="absolute inset-y-0 right-0 flex items-center pr-3 cursor-pointer" onClick={togglePasswordVisibility}>
+                        <span
+                          className="absolute inset-y-0 right-0 flex cursor-pointer items-center pr-3"
+                          onClick={togglePasswordVisibility}
+                        >
                           {showPassword ? <FaEyeSlash /> : <FaEye />}
                         </span>
                       </div>
@@ -297,7 +337,10 @@ export default function SignUpBoxed() {
 
                     {/* Confirm Password */}
                     <div className="space-y-1">
-                      <label htmlFor="confirmPassword" className="inline-block text-sm text-white font-medium">
+                      <label
+                        htmlFor="confirmPassword"
+                        className="inline-block text-sm font-medium text-white"
+                      >
                         Confirm Password
                       </label>
                       <div className="relative">
@@ -310,33 +353,47 @@ export default function SignUpBoxed() {
                           onChange={(e) => setConfirmPassword(e.target.value)}
                           className="block w-full rounded-lg border border-gray-200 px-5 py-3 leading-6 dark:border-gray-600 dark:bg-gray-800"
                         />
-                        <span className="absolute inset-y-0 right-0 flex items-center pr-3 cursor-pointer" onClick={toggleConfirmPasswordVisibility}>
+                        <span
+                          className="absolute inset-y-0 right-0 flex cursor-pointer items-center pr-3"
+                          onClick={toggleConfirmPasswordVisibility}
+                        >
                           {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
                         </span>
                       </div>
                     </div>
 
                     {/* Alerts */}
-                    {showAlert && <div className="text-red-500 text-sm">{errorMessage}</div>}
-                    {showSuccessAlert && <div className="text-green-500 text-sm">Account created! Redirecting...</div>}
+                    {showAlert && (
+                      <div className="text-sm text-red-500">{errorMessage}</div>
+                    )}
+                    {showSuccessAlert && (
+                      <div className="text-sm text-green-500">
+                        Account created! Redirecting...
+                      </div>
+                    )}
 
                     {/* Sign Up Button */}
-                    <button type="submit" className="w-full rounded-lg bg-blue-700 px-6 py-3 text-white font-semibold hover:bg-blue-600">
+                    <button
+                      type="submit"
+                      className="w-full rounded-lg bg-blue-700 px-6 py-3 font-semibold text-white hover:bg-blue-600"
+                    >
                       Create Account
                     </button>
                   </form>
 
                   {/* Divider */}
-                  <div className="flex items-center justify-center my-4">
-                    <span className="text-s text-gray-500 dark:text-gray-400">or sign up with</span>
+                  <div className="my-4 flex items-center justify-center">
+                    <span className="text-s text-gray-500 dark:text-gray-400">
+                      or sign up with
+                    </span>
                   </div>
 
                   {/* Google Sign Up Button */}
                   <button
                     onClick={handleGoogleSignUp}
-                    className="flex items-center justify-center w-full bg-[#334155] text-white rounded-lg py-3 shadow-md hover:bg-[#475569]"
+                    className="flex w-full items-center justify-center rounded-lg bg-[#334155] py-3 text-white shadow-md hover:bg-[#475569]"
                   >
-                    <img src={googleLogo} alt="Google" className="h-5 mr-2" />
+                    <img src={googleLogo} alt="Google" className="mr-2 h-5" />
                     Sign up with Google
                   </button>
                 </div>
@@ -344,12 +401,15 @@ export default function SignUpBoxed() {
                 {/* Footer */}
                 <div className="p-3 text-center text-sm text-gray-500 dark:text-gray-400">
                   Already have an account?{" "}
-                  <button onClick={() => navigate("/signin")} className="text-blue-600 dark:text-blue-400">
+                  <button
+                    onClick={() => navigate("/signin")}
+                    className="text-blue-600 dark:text-blue-400"
+                  >
                     Sign In
                   </button>
                 </div>
               </div>
-              
+
               {/* Powered By */}
               <div className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
                 <img src={poweredBy} alt="Powered By" className="mx-auto h-5" />
