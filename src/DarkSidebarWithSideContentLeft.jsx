@@ -67,14 +67,14 @@ export default function DarkSidebarWithSideContentLeft() {
       <div
         id="page-container"
         className={`mx-auto flex min-h-dvh w-full min-w-80 flex-col bg-[#101b31] dark:text-gray-100 ${
-          desktopSidebarOpen ? "lg:pl-64" : ""
+          desktopSidebarOpen ? "lg:pl-72" : ""
         }`}
       >
         {/* Page Sidebar */}
         <nav
           id="page-sidebar"
           aria-label="Main Sidebar Navigation"
-          className={`fixed top-0 bottom-0 left-0 z-50 flex h-full w-full flex-col border-r border-gray-800 bg-gray-800 text-gray-200 transition-transform duration-500 ease-out lg:w-64 ${
+          className={`fixed top-0 bottom-0 left-0 z-50 flex h-full w-full flex-col border-r border-gray-800 bg-gray-800 text-gray-200 transition-transform duration-500 ease-out lg:w-72 ${
             desktopSidebarOpen ? "lg:translate-x-0" : "lg:-translate-x-full"
           } ${mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
         >
@@ -116,9 +116,9 @@ export default function DarkSidebarWithSideContentLeft() {
           {/* END Sidebar Header */}
 
           {/* Sidebar Navigation */}
-          <div className="overflow-y-auto">
-            <div className="w-full p-4">
-              <nav className="space-y-1">
+          <div className="overflow-y-auto flex flex-col h-full">
+            <div className="w-full p-4 flex-1">
+              <nav className="space-y-2">
                 {/* Dashboard Link */}
                 <a
                   href="#"
@@ -126,15 +126,15 @@ export default function DarkSidebarWithSideContentLeft() {
                     e.preventDefault();
                     setActiveView("dashboard");
                   }}
-                  className={`group flex items-center gap-2 rounded-lg border border-transparent px-2.5 text-sm font-medium ${
+                  className={`group flex items-center gap-3 rounded-lg border border-transparent px-3 py-3 text-base font-medium transition-all ${
                     activeView === "dashboard"
-                      ? "bg-gray-700/75 text-white"
+                      ? "bg-gray-700/75 text-white shadow-md"
                       : "text-gray-200 hover:bg-gray-700/75 hover:text-white active:border-gray-600"
                   }`}
                 >
                   <span className="flex flex-none items-center">
                     <svg
-                      className="hi-outline hi-home inline-block size-5"
+                      className="hi-outline hi-home inline-block size-6"
                       xmlns="http://www.w3.org/2000/svg"
                       fill="none"
                       viewBox="0 0 24 24"
@@ -149,12 +149,8 @@ export default function DarkSidebarWithSideContentLeft() {
                       />
                     </svg>
                   </span>
-                  <span className="grow py-2">Dashboard</span>
+                  <span className="grow">Dashboard</span>
                 </a>
-
-                <div className="px-3 pt-5 pb-2 text-xs font-semibold tracking-wider text-gray-500 uppercase">
-                  Projects
-                </div>
 
                 {/* Assessment Link: Render different options based on user role */}
                 {userRole === "admin" ? (
@@ -164,15 +160,15 @@ export default function DarkSidebarWithSideContentLeft() {
                       e.preventDefault();
                       setActiveView("assessment");
                     }}
-                    className={`group flex items-center gap-2 rounded-lg border border-transparent px-2.5 text-sm font-medium ${
+                    className={`group flex items-center gap-3 rounded-lg border border-transparent px-3 py-3 text-base font-medium transition-all ${
                       activeView === "assessment"
-                        ? "bg-gray-700/75 text-white"
+                        ? "bg-gray-700/75 text-white shadow-md"
                         : "text-gray-200 hover:bg-gray-700/75 hover:text-white active:border-gray-600"
                     }`}
                   >
-                    <span className="flex flex-none items-center text-gray-500 group-hover:text-gray-300">
+                    <span className="flex flex-none items-center">
                       <svg
-                        className="hi-outline hi-briefcase inline-block size-5"
+                        className="hi-outline inline-block size-6"
                         xmlns="http://www.w3.org/2000/svg"
                         fill="none"
                         viewBox="0 0 24 24"
@@ -183,11 +179,11 @@ export default function DarkSidebarWithSideContentLeft() {
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
-                          d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 00.75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 00-3.413-.387"
+                          d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
                         />
                       </svg>
                     </span>
-                    <span className="grow py-2">Assessment Management</span>
+                    <span className="grow">Assessment Management</span>
                   </a>
                 ) : (
                   <a
@@ -196,15 +192,15 @@ export default function DarkSidebarWithSideContentLeft() {
                       e.preventDefault();
                       setActiveView("assessmentUser");
                     }}
-                    className={`group flex items-center gap-2 rounded-lg border border-transparent px-2.5 text-sm font-medium ${
+                    className={`group flex items-center gap-3 rounded-lg border border-transparent px-3 py-3 text-base font-medium transition-all ${
                       activeView === "assessmentUser"
-                        ? "bg-gray-700/75 text-white"
+                        ? "bg-gray-700/75 text-white shadow-md"
                         : "text-gray-200 hover:bg-gray-700/75 hover:text-white active:border-gray-600"
                     }`}
                   >
-                    <span className="flex flex-none items-center text-gray-500 group-hover:text-gray-300">
+                    <span className="flex flex-none items-center">
                       <svg
-                        className="hi-outline hi-briefcase inline-block size-5"
+                        className="hi-outline inline-block size-6"
                         xmlns="http://www.w3.org/2000/svg"
                         fill="none"
                         viewBox="0 0 24 24"
@@ -215,12 +211,11 @@ export default function DarkSidebarWithSideContentLeft() {
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
-                          d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 00.75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 00-3.413-.387"
+                          d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
                         />
                       </svg>
                     </span>
-                    <span className="grow py-2">Assessment</span>
-                    
+                    <span className="grow">Assessment</span>
                   </a>
                 )}
 
@@ -230,15 +225,15 @@ export default function DarkSidebarWithSideContentLeft() {
                     e.preventDefault();
                     setActiveView("assessment");
                   }}
-                  className={`group flex items-center gap-2 rounded-lg border border-transparent px-2.5 text-sm font-medium ${
+                  className={`group flex items-center gap-3 rounded-lg border border-transparent px-3 py-3 text-base font-medium transition-all ${
                     activeView === "assessment"
-                      ? "bg-gray-700/75 text-white"
+                      ? "bg-gray-700/75 text-white shadow-md"
                       : "text-gray-200 hover:bg-gray-700/75 hover:text-white active:border-gray-600"
                   }`}
                 >
-                  <span className="flex flex-none items-center text-gray-500 group-hover:text-gray-300">
+                  <span className="flex flex-none items-center">
                     <svg
-                      className="hi-outline hi-briefcase inline-block size-5"
+                      className="hi-outline inline-block size-6"
                       xmlns="http://www.w3.org/2000/svg"
                       fill="none"
                       viewBox="0 0 24 24"
@@ -249,11 +244,11 @@ export default function DarkSidebarWithSideContentLeft() {
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
-                        d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 00.75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 00-3.413-.387"
+                        d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"
                       />
                     </svg>
                   </span>
-                  <span className="grow py-2">Analytics</span>
+                  <span className="grow">Analytics</span>
                 </a>
                 <a
                   href="#"
@@ -261,15 +256,15 @@ export default function DarkSidebarWithSideContentLeft() {
                     e.preventDefault();
                     setActiveView("assessment");
                   }}
-                  className={`group flex items-center gap-2 rounded-lg border border-transparent px-2.5 text-sm font-medium ${
+                  className={`group flex items-center gap-3 rounded-lg border border-transparent px-3 py-3 text-base font-medium transition-all ${
                     activeView === "assessment"
-                      ? "bg-gray-700/75 text-white"
+                      ? "bg-gray-700/75 text-white shadow-md"
                       : "text-gray-200 hover:bg-gray-700/75 hover:text-white active:border-gray-600"
                   }`}
                 >
-                  <span className="flex flex-none items-center text-gray-500 group-hover:text-gray-300">
+                  <span className="flex flex-none items-center">
                     <svg
-                      className="hi-outline hi-briefcase inline-block size-5"
+                      className="hi-outline inline-block size-6"
                       xmlns="http://www.w3.org/2000/svg"
                       fill="none"
                       viewBox="0 0 24 24"
@@ -280,41 +275,94 @@ export default function DarkSidebarWithSideContentLeft() {
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
-                        d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 00.75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 00-3.413-.387"
+                        d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"
                       />
                     </svg>
                   </span>
-                  <span className="grow py-2">Resources</span>
+                  <span className="grow">Resources</span>
                 </a>
-                <div className="px-3 pt-5 pb-2 text-xs font-semibold tracking-wider text-gray-500 uppercase">
-                  Profile
-                </div>
-                <a
-                  href="#"
-                  onClick={handleLogout}
-                  className="group flex items-center gap-2 rounded-lg border border-transparent px-2.5 text-sm font-medium text-gray-200 hover:bg-gray-700/75 hover:text-white active:border-gray-600"
-                >
-                  <span className="flex flex-none items-center text-gray-500 group-hover:text-gray-300">
-                    <svg
-                      className="hi-outline hi-lock-closed inline-block size-5"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth="1.5"
-                      stroke="currentColor"
-                      aria-hidden="true"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
-                      />
-                    </svg>
-                  </span>
-                  <span className="grow py-2">Log out</span>
-                </a>
-                {/* ... Additional Sidebar Links remain unchanged ... */}
               </nav>
+            </div>
+            
+            {/* Bottom Section with Feedback, Bug Report, and Logout */}
+            <div className="w-full p-4 border-t border-gray-700 space-y-2">
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  // Handle give feedback action
+                  alert("Feedback feature coming soon!");
+                }}
+                className="w-full flex items-center gap-3 rounded-lg border border-transparent px-3 py-3 text-base font-medium text-gray-200 hover:bg-gray-700/75 hover:text-white transition-all"
+              >
+                <span className="flex flex-none items-center">
+                  <svg
+                    className="hi-outline inline-block size-6"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth="1.5"
+                    stroke="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"
+                    />
+                  </svg>
+                </span>
+                <span className="grow text-left">Give Feedback</span>
+              </button>
+              
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  // Handle report bug action
+                  alert("Bug report feature coming soon!");
+                }}
+                className="w-full flex items-center gap-3 rounded-lg border border-transparent px-3 py-3 text-base font-medium text-gray-200 hover:bg-gray-700/75 hover:text-white transition-all"
+              >
+                <span className="flex flex-none items-center">
+                  <svg
+                    className="hi-outline inline-block size-6"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth="1.5"
+                    stroke="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+                    />
+                  </svg>
+                </span>
+                <span className="grow text-left">Report a Bug</span>
+              </button>
+              
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center justify-center gap-3 rounded-lg bg-red-600 hover:bg-red-700 px-3 py-3 text-base font-semibold text-white transition-all shadow-md hover:shadow-lg"
+              >
+                <svg
+                  className="hi-outline inline-block size-6"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth="1.5"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"
+                  />
+                </svg>
+                <span>Logout</span>
+              </button>
             </div>
           </div>
           {/* END Sidebar Navigation */}
@@ -325,7 +373,7 @@ export default function DarkSidebarWithSideContentLeft() {
         <header
           id="page-header"
           className={`fixed top-0 right-0 left-0 z-30 flex h-16 flex-none items-center bg-[#10172A] dark:bg-gray-800 ${
-            desktopSidebarOpen ? "lg:pl-64" : ""
+            desktopSidebarOpen ? "lg:pl-72" : ""
           }`}
           style={{ boxShadow: "0 10px 40px #162442" }}
         >
