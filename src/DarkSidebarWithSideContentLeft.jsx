@@ -12,8 +12,6 @@ import BugReportModal from "./components/BugReportModal";
 import Dashboard from "./Dashboard.jsx";
 import Assessment from "./Assessment.jsx";
 import AssessmentUser from "./AssessmentUser.jsx";
-import Reports from "./Reports.jsx";
-import Resources from "./Resources.jsx";
 import AdminDashboard from "./components/AdminDashboard/AdminDashboard.jsx";
 
 export default function DarkSidebarWithSideContentLeft() {
@@ -223,68 +221,6 @@ export default function DarkSidebarWithSideContentLeft() {
                   </a>
                 )}
 
-                <a
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setActiveView("reports");
-                  }}
-                  className={`group flex items-center gap-3 rounded-lg border border-transparent px-3 py-3 text-base font-medium transition-all ${
-                    activeView === "reports"
-                      ? "bg-gray-700/75 text-white shadow-md"
-                      : "text-gray-200 hover:bg-gray-700/75 hover:text-white active:border-gray-600"
-                  }`}
-                >
-                  <span className="flex flex-none items-center">
-                    <svg
-                      className="hi-outline inline-block size-6"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth="1.5"
-                      stroke="currentColor"
-                      aria-hidden="true"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
-                      />
-                    </svg>
-                  </span>
-                  <span className="grow">Reports</span>
-                </a>
-                <a
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setActiveView("resources");
-                  }}
-                  className={`group flex items-center gap-3 rounded-lg border border-transparent px-3 py-3 text-base font-medium transition-all ${
-                    activeView === "resources"
-                      ? "bg-gray-700/75 text-white shadow-md"
-                      : "text-gray-200 hover:bg-gray-700/75 hover:text-white active:border-gray-600"
-                  }`}
-                >
-                  <span className="flex flex-none items-center">
-                    <svg
-                      className="hi-outline inline-block size-6"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth="1.5"
-                      stroke="currentColor"
-                      aria-hidden="true"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"
-                      />
-                    </svg>
-                  </span>
-                  <span className="grow">Resources</span>
-                </a>
 
                 {/* Admin Dashboard Link - Only visible to admins */}
                 {userRole === "admin" && (
@@ -572,14 +508,7 @@ export default function DarkSidebarWithSideContentLeft() {
           {/* The active view now entirely manages its own side content */}
           <div className="mx-auto flex w-full max-w-10xl grow flex-col p-4 lg:p-8">
             {activeView === "dashboard" ? (
-              <Dashboard 
-                onNavigateToReports={() => setActiveView("reports")}
-                onNavigateToResources={() => setActiveView("resources")}
-              />
-            ) : activeView === "reports" ? (
-              <Reports />
-            ) : activeView === "resources" ? (
-              <Resources />
+              <Dashboard />
             ) : activeView === "assessment" ? (
               <Assessment />
             ) : activeView === "adminDashboard" ? (

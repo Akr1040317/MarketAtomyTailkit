@@ -372,7 +372,7 @@ export default function AssessmentManagement() {
                     type="text"
                     value={editingSection.beginningText || ""}
                     onChange={(e) => handleBeginningTextChange(e.target.value)}
-                    className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-400"
+                    className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-400 text-gray-900 bg-white"
                   />
                 </div>
                 <div>
@@ -381,7 +381,7 @@ export default function AssessmentManagement() {
                     type="text"
                     value={editingSection.endingText || ""}
                     onChange={(e) => handleEndingTextChange(e.target.value)}
-                    className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-400"
+                    className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-400 text-gray-900 bg-white"
                   />
                 </div>
               </div>
@@ -458,14 +458,14 @@ export default function AssessmentManagement() {
                           type="text"
                           value={question.text}
                           onChange={(e) => handleQuestionTextChange(qIndex, e.target.value)}
-                          className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-400 mb-3"
+                          className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-400 mb-3 text-gray-900 bg-white"
                           placeholder="Enter question text"
                         />
 
                         <select
                           value={question.type}
                           onChange={(e) => handleQuestionTypeChange(qIndex, e.target.value)}
-                          className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-400 mb-3"
+                          className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-400 mb-3 text-gray-900 bg-white"
                         >
                           <option value="multipleChoice">Multiple Choice</option>
                           <option value="multipleSelect">Multiple Select</option>
@@ -488,7 +488,7 @@ export default function AssessmentManagement() {
                                       onChange={(e) =>
                                         handleOptionChange(qIndex, oIndex, "label", e.target.value)
                                       }
-                                      className="flex-1 p-2 border border-gray-200 rounded-lg"
+                                      className="flex-1 p-2 border border-gray-200 rounded-lg text-gray-900 bg-white"
                                       placeholder="Option label"
                                     />
                                     <input
@@ -497,7 +497,7 @@ export default function AssessmentManagement() {
                                       onChange={(e) =>
                                         handleOptionChange(qIndex, oIndex, "weight", e.target.value)
                                       }
-                                      className="w-20 p-2 border border-gray-200 rounded-lg"
+                                      className="w-20 p-2 border border-gray-200 rounded-lg text-gray-900 bg-white"
                                       placeholder="Weight"
                                     />
                                     <button

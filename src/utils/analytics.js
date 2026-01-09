@@ -1,4 +1,4 @@
-import { CATEGORY_RANGES, getCategoryRange, getCategoryMaxScore, getCategoryThresholds } from './scoreRanges';
+import { CATEGORY_RANGES, getCategoryRange, getCategoryMaxScore, getCategoryThresholds } from './scoreRanges.js';
 
 /**
  * Normalize a raw score to a percentage

@@ -68,7 +68,7 @@ const RoadmapStep = ({ step, label, isActive }) => (
   </div>
 );
 
-export default function Dashboard({ onNavigateToReports, onNavigateToResources }) {
+export default function Dashboard() {
   const [computedScores, setComputedScores] = useState(null);
   const [enhancedScores, setEnhancedScores] = useState(null);
   const [completedSections, setCompletedSections] = useState([]);
@@ -280,11 +280,6 @@ export default function Dashboard({ onNavigateToReports, onNavigateToResources }
               </div>
               <div className="mt-6 flex justify-end gap-4">
                 <button
-                  onClick={() => {
-                    if (onNavigateToReports) {
-                      onNavigateToReports();
-                    }
-                  }}
                   className="px-6 py-3 bg-emerald-500 text-white rounded-lg font-semibold hover:bg-emerald-600 transition-colors shadow-lg hover:shadow-xl"
                 >
                   View Full Report
@@ -416,9 +411,6 @@ export default function Dashboard({ onNavigateToReports, onNavigateToResources }
                   href="#"
                   onClick={(e) => {
                     e.preventDefault();
-                    if (onNavigateToResources) {
-                      onNavigateToResources();
-                    }
                   }}
                   className="bg-gray-800/50 backdrop-blur-sm p-8 rounded-xl text-gray-100 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:bg-gray-700/50 border border-gray-700 hover:border-emerald-500"
                 >
@@ -453,9 +445,6 @@ export default function Dashboard({ onNavigateToReports, onNavigateToResources }
                   href="#"
                   onClick={(e) => {
                     e.preventDefault();
-                    if (onNavigateToResources) {
-                      onNavigateToResources();
-                    }
                   }}
                   className="text-emerald-400 hover:text-emerald-300 font-semibold underline"
                 >

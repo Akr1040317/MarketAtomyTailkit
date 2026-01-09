@@ -33,3 +33,8 @@
 :root {
   background-color: #0f172a;
 }
+
+/* Override Tailwind base reset to remove color: inherit from form elements */
+input, select, optgroup, textarea {
+  color: #000000 !important;
+}

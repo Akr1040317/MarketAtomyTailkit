@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { auth, db } from "./firebaseConfig";
 import {
@@ -9,8 +9,93 @@ import {
 } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { motion, useInView } from "framer-motion";
 import companyLogo from "./assets/MarketAtomy-HOR-300x92.png";
 import googleLogo from "./assets/google.png";
+
+// Reusable animation variants
+const fadeInUp = {
+  hidden: { opacity: 0, y: 60 },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    transition: { duration: 0.6, ease: "easeOut" }
+  }
+};
+
+const fadeInLeft = {
+  hidden: { opacity: 0, x: -60 },
+  visible: { 
+    opacity: 1, 
+    x: 0,
+    transition: { duration: 0.6, ease: "easeOut" }
+  }
+};
+
+const fadeInRight = {
+  hidden: { opacity: 0, x: 60 },
+  visible: { 
+    opacity: 1, 
+    x: 0,
+    transition: { duration: 0.6, ease: "easeOut" }
+  }
+};
+
+const scaleIn = {
+  hidden: { opacity: 0, scale: 0.8 },
+  visible: { 
+    opacity: 1, 
+    scale: 1,
+    transition: { duration: 0.5, ease: "easeOut" }
+  }
+};
+
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.2
+    }
+  }
+};
+
+// Reusable animated section component
+const AnimatedSection = ({ children, className = "", variant = fadeInUp }) => {
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, margin: "-100px" });
+  
+  return (
+    <motion.div
+      ref={ref}
+      initial="hidden"
+      animate={isInView ? "visible" : "hidden"}
+      variants={variant}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+};
+
+// Animated container for staggered children
+const AnimatedContainer = ({ children, className = "" }) => {
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, margin: "-100px" });
+  
+  return (
+    <motion.div
+      ref={ref}
+      initial="hidden"
+      animate={isInView ? "visible" : "hidden"}
+      variants={staggerContainer}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+};
 
 export default function LandingPage() {
   const navigate = useNavigate();
@@ -668,33 +753,48 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative pt-20 pb-32 px-6 lg:px-8 overflow-hidden">
+      <section className="relative min-h-screen flex items-center justify-center pt-20 pb-24 px-6 lg:px-8 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 via-cyan-900/20 to-orange-900/20"></div>
         <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
         <div className="absolute bottom-0 left-0 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl"></div>
         
-        <div className="relative max-w-7xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-12 items-center pt-16">
-            <div className="text-center lg:text-left">
-              <div className="inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-blue-600/20 to-cyan-600/20 border border-blue-500/30 mb-6">
-                <span className="text-sm font-medium bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-                  Preventative Measures = Healthy Growth Results
-                </span>
-              </div>
-              <h1 className="text-5xl md:text-6xl lg:text-7xl font-black mb-6 leading-tight">
+        <div className="relative max-w-7xl mx-auto w-full">
+          <div className="grid lg:grid-cols-2 gap-12 items-center justify-items-center">
+            <AnimatedSection variant={fadeInLeft} className="text-center lg:text-left w-full">
+              <motion.h1 
+                className="text-5xl md:text-6xl lg:text-7xl font-black mb-6 leading-tight"
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.2 }}
+              >
                 <span className="bg-gradient-to-r from-blue-400 via-cyan-400 to-orange-400 bg-clip-text text-transparent">
                   Business Health Check
                 </span>
                 <br />
                 <span className="text-white">Assessment</span>
-              </h1>
-              <p className="text-xl md:text-2xl text-gray-300 mb-4 leading-relaxed">
-                Evaluate your business across 20 critical performance areas. Identify gaps and opportunities for sustainable growth.
-              </p>
-              <p className="text-lg text-gray-400 mb-8">
+              </motion.h1>
+              <motion.p 
+                className="text-xl md:text-2xl text-gray-300 mb-4 leading-relaxed"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.4 }}
+              >
+                Evaluate your business across 20 critical performance areas and identify opportunities for sustainable growth.
+              </motion.p>
+              <motion.p 
+                className="text-lg text-gray-400 mb-8"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.5 }}
+              >
                 For just <span className="text-white font-bold text-2xl">$297</span>, discover where the gaps are that could interfere in the growth of your company.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-4">
+              </motion.p>
+              <motion.div 
+                className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-6"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.6 }}
+              >
                 <button
                   onClick={() => { setActiveView("signup"); navigate("/signup"); }}
                   className="bg-gradient-to-r from-orange-600 to-yellow-500 hover:from-orange-700 hover:to-yellow-600 text-white px-10 py-4 rounded-lg text-lg font-bold transition-all shadow-xl hover:shadow-2xl hover:scale-105"
@@ -707,16 +807,26 @@ export default function LandingPage() {
                 >
                   Sign In
                 </button>
-              </div>
-              <p className="text-sm text-gray-500">
+              </motion.div>
+              <motion.p 
+                className="text-sm text-gray-500"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.8, delay: 0.7 }}
+              >
                 Privacy Policy: We value your email privacy and never send SPAM.
-              </p>
-            </div>
+              </motion.p>
+            </AnimatedSection>
 
-            <div className="hidden lg:block">
-              <div className="relative">
+            <AnimatedSection variant={fadeInRight} className="hidden lg:flex items-center justify-center w-full">
+              <div className="relative w-full max-w-md">
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-cyan-600/20 rounded-3xl blur-3xl"></div>
-                <div className="relative bg-gray-800/60 backdrop-blur-sm rounded-2xl p-8 border border-gray-700/50">
+                <motion.div 
+                  className="relative bg-gray-800/60 backdrop-blur-sm rounded-2xl p-8 border border-gray-700/50"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.8, delay: 0.3 }}
+                >
                   <div className="grid grid-cols-2 gap-4">
                     {[
                       { label: "Foundational Structure", score: 85, color: "from-blue-500 to-blue-600" },
@@ -724,54 +834,89 @@ export default function LandingPage() {
                       { label: "Sales & Marketing", score: 68, color: "from-cyan-500 to-cyan-600" },
                       { label: "Product Viability", score: 90, color: "from-orange-500 to-orange-600" },
                     ].map((item, idx) => (
-                      <div key={idx} className="bg-gray-900/60 rounded-xl p-4 border border-gray-700/50 backdrop-blur-sm">
+                      <motion.div 
+                        key={idx} 
+                        className="bg-gray-900/60 rounded-xl p-4 border border-gray-700/50 backdrop-blur-sm"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: 0.5 + idx * 0.1 }}
+                      >
                         <div className="text-sm text-gray-400 mb-2">{item.label}</div>
                         <div className="text-2xl font-bold text-white mb-2">{item.score}%</div>
                         <div className="w-full bg-gray-800 rounded-full h-2 overflow-hidden">
-                          <div
-                            className={`bg-gradient-to-r ${item.color} h-2 rounded-full transition-all`}
-                            style={{ width: `${item.score}%` }}
-                          ></div>
+                          <motion.div
+                            className={`bg-gradient-to-r ${item.color} h-2 rounded-full`}
+                            initial={{ width: 0 }}
+                            animate={{ width: `${item.score}%` }}
+                            transition={{ duration: 1, delay: 0.7 + idx * 0.1, ease: "easeOut" }}
+                          ></motion.div>
                         </div>
-                      </div>
+                      </motion.div>
                     ))}
                   </div>
-                </div>
+                </motion.div>
               </div>
-            </div>
+            </AnimatedSection>
           </div>
         </div>
       </section>
 
       {/* Key Statistics */}
-      <section className="py-16 px-6 lg:px-8 relative">
+      <AnimatedSection className="py-16 px-6 lg:px-8 relative">
         <div className="absolute inset-0 bg-gradient-to-r from-blue-900/10 via-cyan-900/10 to-orange-900/10"></div>
         <div className="relative max-w-6xl mx-auto">
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center p-6 rounded-xl bg-gradient-to-br from-blue-600/10 to-blue-800/10 border border-blue-500/20 backdrop-blur-sm">
-              <div className="text-5xl font-bold bg-gradient-to-r from-blue-400 to-blue-300 bg-clip-text text-transparent mb-2">400,000+</div>
-              <div className="text-gray-400">New businesses start annually</div>
-            </div>
-            <div className="text-center p-6 rounded-xl bg-gradient-to-br from-orange-600/10 to-yellow-600/10 border border-orange-500/20 backdrop-blur-sm">
-              <div className="text-5xl font-bold bg-gradient-to-r from-orange-400 to-yellow-400 bg-clip-text text-transparent mb-2">70%</div>
-              <div className="text-gray-400">Fail within 24 months</div>
-            </div>
-            <div className="text-center p-6 rounded-xl bg-gradient-to-br from-cyan-600/10 to-cyan-800/10 border border-cyan-500/20 backdrop-blur-sm">
-              <div className="text-5xl font-bold bg-gradient-to-r from-cyan-400 to-cyan-300 bg-clip-text text-transparent mb-2">20</div>
-              <div className="text-gray-400">Critical areas evaluated</div>
-            </div>
-          </div>
-          <p className="text-center text-gray-300 mt-8 text-lg">
+          <AnimatedContainer className="grid md:grid-cols-3 gap-8">
+            {[
+              { number: "400,000+", label: "New businesses start annually", gradient: "from-blue-400 to-blue-300", bg: "from-blue-600/10 to-blue-800/10", border: "border-blue-500/20" },
+              { number: "70%", label: "Fail within 24 months", gradient: "from-orange-400 to-yellow-400", bg: "from-orange-600/10 to-yellow-600/10", border: "border-orange-500/20" },
+              { number: "20", label: "Critical areas evaluated", gradient: "from-cyan-400 to-cyan-300", bg: "from-cyan-600/10 to-cyan-800/10", border: "border-cyan-500/20" },
+            ].map((stat, idx) => (
+              <motion.div
+                key={idx}
+                variants={scaleIn}
+                className="text-center p-6 rounded-xl bg-gradient-to-br border backdrop-blur-sm"
+                style={{
+                  backgroundImage: `linear-gradient(to bottom right, var(--tw-gradient-stops))`,
+                }}
+              >
+                <div className={`text-center p-6 rounded-xl bg-gradient-to-br ${stat.bg} border ${stat.border} backdrop-blur-sm`}>
+                  <motion.div 
+                    className={`text-5xl font-bold bg-gradient-to-r ${stat.gradient} bg-clip-text text-transparent mb-2`}
+                    initial={{ opacity: 0, scale: 0.5 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5, delay: idx * 0.1 }}
+                  >
+                    {stat.number}
+                  </motion.div>
+                  <div className="text-gray-400">{stat.label}</div>
+                </div>
+              </motion.div>
+            ))}
+          </AnimatedContainer>
+          <motion.p 
+            className="text-center text-gray-300 mt-8 text-lg"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+          >
             Common reasons for failure: <span className="text-white font-semibold">poor management, undercapitalization, incorrect pricing structures</span>
-          </p>
+          </motion.p>
         </div>
-      </section>
+      </AnimatedSection>
 
       {/* Features Section - The 5 Business Health Systems */}
-      <section id="features" className="py-24 px-6 lg:px-8 relative">
+      <AnimatedSection id="features" className="py-24 px-6 lg:px-8 relative">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-900/5 to-transparent"></div>
         <div className="relative max-w-7xl mx-auto">
-          <div className="text-center mb-16">
+          <motion.div 
+            className="text-center mb-16"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
             <h2 className="text-4xl md:text-5xl font-black mb-4">
               <span className="bg-gradient-to-r from-blue-400 via-cyan-400 to-orange-400 bg-clip-text text-transparent">
                 The 5 Business Health Systems
@@ -780,9 +925,9 @@ export default function LandingPage() {
             <p className="text-xl text-gray-400 max-w-2xl mx-auto">
               Comprehensive evaluation across five critical interdependent systems
             </p>
-          </div>
+          </motion.div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+          <AnimatedContainer className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
             {[
               {
                 title: "Foundational Structure",
@@ -820,9 +965,11 @@ export default function LandingPage() {
                 icon: "💊"
               },
             ].map((system, idx) => (
-              <div
+              <motion.div
                 key={idx}
+                variants={fadeInUp}
                 className={`bg-gradient-to-br ${system.gradient} rounded-xl p-6 border ${system.border} hover:scale-105 transition-all backdrop-blur-sm`}
+                whileHover={{ y: -5, transition: { duration: 0.2 } }}
               >
                 <div className="text-3xl mb-3">{system.icon}</div>
                 <div className="text-xl font-bold text-white mb-4">{system.title}</div>
@@ -834,96 +981,133 @@ export default function LandingPage() {
                     </li>
                   ))}
                 </ul>
-              </div>
+              </motion.div>
             ))}
-          </div>
+          </AnimatedContainer>
 
-          <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/80 rounded-2xl p-8 border border-gray-700/50 backdrop-blur-sm">
+          <motion.div 
+            className="bg-gradient-to-br from-gray-800/80 to-gray-900/80 rounded-2xl p-8 border border-gray-700/50 backdrop-blur-sm"
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+          >
             <h3 className="text-3xl font-bold mb-6 text-center">
               <span className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
                 What You'll Receive
               </span>
             </h3>
             <div className="grid md:grid-cols-2 gap-8 mt-6">
-              <div>
-                <ul className="space-y-4">
-                  {[
-                    "Comprehensive PDF Report",
-                    "Category Score Breakdowns",
-                    "Health Level Indicators",
-                    "Priority Action Items"
-                  ].map((item, idx) => (
-                    <li key={idx} className="flex items-center text-gray-300">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center mr-4 flex-shrink-0">
-                        <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                      <span className="text-lg">{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div>
-                <ul className="space-y-4">
-                  {[
-                    "Recommended Resources",
-                    "Growth Roadmap",
-                    "Progress Tracking",
-                    "Actionable Recommendations"
-                  ].map((item, idx) => (
-                    <li key={idx} className="flex items-center text-gray-300">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-r from-orange-500 to-yellow-500 flex items-center justify-center mr-4 flex-shrink-0">
-                        <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                      <span className="text-lg">{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              {[
+                [
+                  "Comprehensive PDF Report",
+                  "Category Score Breakdowns",
+                  "Health Level Indicators",
+                  "Priority Action Items"
+                ],
+                [
+                  "Recommended Resources",
+                  "Growth Roadmap",
+                  "Progress Tracking",
+                  "Actionable Recommendations"
+                ]
+              ].map((list, listIdx) => (
+                <div key={listIdx}>
+                  <ul className="space-y-4">
+                    {list.map((item, idx) => (
+                      <motion.li 
+                        key={idx} 
+                        className="flex items-center text-gray-300"
+                        initial={{ opacity: 0, x: -20 }}
+                        whileInView={{ opacity: 1, x: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.5, delay: 0.3 + (listIdx * 0.1) + (idx * 0.1) }}
+                      >
+                        <div className={`w-8 h-8 rounded-full bg-gradient-to-r ${listIdx === 0 ? 'from-blue-500 to-cyan-500' : 'from-orange-500 to-yellow-500'} flex items-center justify-center mr-4 flex-shrink-0`}>
+                          <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                        <span className="text-lg">{item}</span>
+                      </motion.li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
             </div>
-          </div>
+          </motion.div>
         </div>
-      </section>
+      </AnimatedSection>
 
       {/* Why Take Assessment */}
-      <section id="assessment" className="py-24 px-6 lg:px-8 relative">
+      <AnimatedSection id="assessment" className="py-24 px-6 lg:px-8 relative">
         <div className="absolute inset-0 bg-gradient-to-r from-blue-900/10 via-cyan-900/10 to-orange-900/10"></div>
         <div className="relative max-w-5xl mx-auto">
-          <h2 className="text-4xl md:text-5xl font-black mb-12 text-center">
+          <motion.h2 
+            className="text-4xl md:text-5xl font-black mb-12 text-center"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
             <span className="bg-gradient-to-r from-blue-400 via-cyan-400 to-orange-400 bg-clip-text text-transparent">
               Why Take The Assessment?
             </span>
-          </h2>
+          </motion.h2>
           <div className="space-y-6 text-gray-300 leading-relaxed">
-            <p className="text-lg">
-              MarketAtomy's Business Health Check is a comprehensive evaluation of the crucial elements of your business and where it is today. It provides questions to help you see your business from the perspective of an external expert.
-            </p>
-            <p className="text-lg">
-              It explores key performance indicators as they relate to each other in the growth process. The outcome defines your business strength while pointing out ways to improve.
-            </p>
-            <div className="bg-gradient-to-r from-orange-600/20 via-yellow-600/20 to-cyan-600/20 border-l-4 border-orange-500 p-8 rounded-r-xl mt-8 backdrop-blur-sm">
+            {[
+              "MarketAtomy's Business Health Check is a comprehensive evaluation of the crucial elements of your business and where it is today. It provides questions to help you see your business from the perspective of an external expert.",
+              "It explores key performance indicators as they relate to each other in the growth process. The outcome defines your business strength while pointing out ways to improve.",
+            ].map((text, idx) => (
+              <motion.p 
+                key={idx}
+                className="text-lg"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: idx * 0.2 }}
+              >
+                {text}
+              </motion.p>
+            ))}
+            <motion.div 
+              className="bg-gradient-to-r from-orange-600/20 via-yellow-600/20 to-cyan-600/20 border-l-4 border-orange-500 p-8 rounded-r-xl mt-8 backdrop-blur-sm"
+              initial={{ opacity: 0, x: -30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+            >
               <p className="text-xl font-bold text-white mb-3">
                 If you don't know what you don't know…how will you know what to focus on fixing?
               </p>
               <p className="text-gray-300">
                 No matter what industry or stage of business you're in, this assessment evaluates 20 critical interdependent areas that could result in high costs and business failure.
               </p>
-            </div>
-            <p className="text-lg mt-6">
+            </motion.div>
+            <motion.p 
+              className="text-lg mt-6"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+            >
               Upon completion, you'll receive a summary report highlighting the <span className="text-white font-semibold">5 functional components</span>: operations, financial strength, product/service viability, marketing/sales, and overall health.
-            </p>
+            </motion.p>
           </div>
         </div>
-      </section>
+      </AnimatedSection>
 
       {/* About MarketAtomy */}
-      <section id="about" className="py-24 px-6 lg:px-8 relative">
+      <AnimatedSection id="about" className="py-24 px-6 lg:px-8 relative">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-blue-900/5 to-transparent"></div>
         <div className="relative max-w-5xl mx-auto">
-          <div className="text-center mb-12">
+          <motion.div 
+            className="text-center mb-12"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
             <h2 className="text-4xl md:text-5xl font-black mb-4">
               <span className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
                 Designed by MarketAtomy
@@ -932,20 +1116,53 @@ export default function LandingPage() {
             <p className="text-xl text-gray-400">
               Empowering small and medium business owners with tools and knowledge
             </p>
-          </div>
+          </motion.div>
           <div className="grid md:grid-cols-2 gap-8">
-            <div className="space-y-6 text-gray-300 leading-relaxed">
-              <p className="text-lg">
-                MarketAtomy is a business growth consulting firm specializing in empowering small and medium business owners with the tools and knowledge needed to build businesses on rock-solid foundations.
-              </p>
-              <p className="text-lg">
-                Most owners are so focused on satisfying immediate needs that they forget to plan for the future. When you only work <span className="text-white font-semibold">"in"</span> the business without working <span className="text-white font-semibold">"on"</span> the business, failure is imminent.
-              </p>
-              <p className="text-lg">
-                We focus on sequencing strategy—helping you identify alternative routes designed to avoid roadblocks and get to revenue faster than traditional strategic planning.
-              </p>
-            </div>
-            <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/80 rounded-2xl p-8 border border-gray-700/50 backdrop-blur-sm">
+            <motion.div 
+              className="space-y-6 text-gray-300 leading-relaxed"
+              initial={{ opacity: 0, x: -30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+            >
+              {[
+                "MarketAtomy is a business growth consulting firm specializing in empowering small and medium business owners with the tools and knowledge needed to build businesses on rock-solid foundations.",
+                "Most owners are so focused on satisfying immediate needs that they forget to plan for the future. When you only work \"in\" the business without working \"on\" the business, failure is imminent.",
+                "We focus on sequencing strategy—helping you identify alternative routes designed to avoid roadblocks and get to revenue faster than traditional strategic planning."
+              ].map((text, idx) => (
+                <motion.p 
+                  key={idx}
+                  className="text-lg"
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: idx * 0.1 }}
+                >
+                  {text.split('"in"').map((part, i) => 
+                    i === 1 ? (
+                      <span key={i}>
+                        <span className="text-white font-semibold">"in"</span>
+                        {part.split('"on"').map((subPart, j) =>
+                          j === 1 ? (
+                            <span key={j}>
+                              <span className="text-white font-semibold">"on"</span>
+                              {subPart}
+                            </span>
+                          ) : subPart
+                        )}
+                      </span>
+                    ) : part
+                  )}
+                </motion.p>
+              ))}
+            </motion.div>
+            <motion.div 
+              className="bg-gradient-to-br from-gray-800/80 to-gray-900/80 rounded-2xl p-8 border border-gray-700/50 backdrop-blur-sm"
+              initial={{ opacity: 0, x: 30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+            >
               <h3 className="text-2xl font-bold text-white mb-6">MarketAtomy's Mission</h3>
               <p className="text-gray-300 mb-4 leading-relaxed font-semibold text-lg">
                 "Focus on the DREAM...Trust the PROCESS!"
@@ -960,14 +1177,21 @@ export default function LandingPage() {
                   "Business Health Check Assessment",
                   "Training & Educational Resources"
                 ].map((item, idx) => (
-                  <div key={idx} className="flex items-start">
+                  <motion.div 
+                    key={idx} 
+                    className="flex items-start"
+                    initial={{ opacity: 0, x: 20 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.4, delay: idx * 0.1 }}
+                  >
                     <div className="w-6 h-6 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center mr-3 flex-shrink-0 mt-0.5">
                       <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
                     </div>
                     <span className="text-gray-300">{item}</span>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
               <div className="mt-6">
@@ -983,29 +1207,59 @@ export default function LandingPage() {
                   </svg>
                 </a>
               </div>
-            </div>
+            </motion.div>
           </div>
         </div>
-      </section>
+      </AnimatedSection>
 
       {/* CTA Section */}
-      <section className="py-24 px-6 lg:px-8 relative">
+      <AnimatedSection className="py-24 px-6 lg:px-8 relative">
         <div className="absolute inset-0 bg-gradient-to-r from-blue-900/20 via-cyan-900/20 to-orange-900/20"></div>
         <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
         <div className="absolute bottom-0 left-0 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl"></div>
-        <div className="relative max-w-4xl mx-auto text-center">
-          <h2 className="text-4xl md:text-5xl font-black mb-4">
+        <motion.div 
+          className="relative max-w-4xl mx-auto text-center"
+          initial={{ opacity: 0, y: 40 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+        >
+          <motion.h2 
+            className="text-4xl md:text-5xl font-black mb-4"
+            initial={{ opacity: 0, scale: 0.9 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+          >
             <span className="bg-gradient-to-r from-blue-400 via-cyan-400 to-orange-400 bg-clip-text text-transparent">
               Ready to Assess Your Business Health?
             </span>
-          </h2>
-          <p className="text-xl text-gray-300 mb-2">
+          </motion.h2>
+          <motion.p 
+            className="text-xl text-gray-300 mb-2"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
             Preventative Measures = Healthy Growth Results
-          </p>
-          <p className="text-lg text-gray-400 mb-8">
+          </motion.p>
+          <motion.p 
+            className="text-lg text-gray-400 mb-8"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+          >
             For just <span className="text-white font-bold text-2xl">$297</span>, find out where the gaps are that could interfere in the growth of your company.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          </motion.p>
+          <motion.div 
+            className="flex flex-col sm:flex-row gap-4 justify-center"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.4 }}
+          >
             <button
               onClick={() => { setActiveView("signup"); navigate("/signup"); }}
               className="bg-gradient-to-r from-orange-600 to-yellow-500 hover:from-orange-700 hover:to-yellow-600 text-white px-10 py-4 rounded-lg text-lg font-bold transition-all shadow-xl hover:shadow-2xl hover:scale-105"
@@ -1018,12 +1272,18 @@ export default function LandingPage() {
             >
               Sign In to Continue
             </button>
-          </div>
-          <p className="text-sm text-gray-500 mt-6">
+          </motion.div>
+          <motion.p 
+            className="text-sm text-gray-500 mt-6"
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.5 }}
+          >
             Privacy Policy: We value your email privacy and never send SPAM.
-          </p>
-        </div>
-      </section>
+          </motion.p>
+        </motion.div>
+      </AnimatedSection>
 
       {/* Footer */}
       <footer className="bg-gray-900 border-t border-gray-800/50 py-12 px-6 lg:px-8">
