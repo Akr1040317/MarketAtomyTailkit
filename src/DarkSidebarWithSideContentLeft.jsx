@@ -14,6 +14,7 @@ import Assessment from "./Assessment.jsx";
 import AssessmentUser from "./AssessmentUser.jsx";
 import Reports from "./Reports.jsx";
 import Resources from "./Resources.jsx";
+import AdminDashboard from "./components/AdminDashboard/AdminDashboard.jsx";
 
 export default function DarkSidebarWithSideContentLeft() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -284,6 +285,41 @@ export default function DarkSidebarWithSideContentLeft() {
                   </span>
                   <span className="grow">Resources</span>
                 </a>
+
+                {/* Admin Dashboard Link - Only visible to admins */}
+                {userRole === "admin" && (
+                  <a
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setActiveView("adminDashboard");
+                    }}
+                    className={`group flex items-center gap-3 rounded-lg border border-transparent px-3 py-3 text-base font-medium transition-all ${
+                      activeView === "adminDashboard"
+                        ? "bg-gray-700/75 text-white shadow-md"
+                        : "text-gray-200 hover:bg-gray-700/75 hover:text-white active:border-gray-600"
+                    }`}
+                  >
+                    <span className="flex flex-none items-center">
+                      <svg
+                        className="hi-outline inline-block size-6"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth="1.5"
+                        stroke="currentColor"
+                        aria-hidden="true"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"
+                        />
+                      </svg>
+                    </span>
+                    <span className="grow">Admin Dashboard</span>
+                  </a>
+                )}
               </nav>
             </div>
             
@@ -546,6 +582,8 @@ export default function DarkSidebarWithSideContentLeft() {
               <Resources />
             ) : activeView === "assessment" ? (
               <Assessment />
+            ) : activeView === "adminDashboard" ? (
+              <AdminDashboard />
             ) : (
               <AssessmentUser />
             )}
