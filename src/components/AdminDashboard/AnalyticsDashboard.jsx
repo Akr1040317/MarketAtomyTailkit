@@ -57,8 +57,7 @@ const TABS = [
   { id: 'sections', label: 'Section Stats', icon: '📝' },
   { id: 'questions', label: 'Question Analysis', icon: '❓' },
   { id: 'categories', label: 'Category Breakdown', icon: '📈' },
-  { id: 'time', label: 'Time Analytics', icon: '⏱️' },
-  { id: 'compare', label: 'Compare', icon: '🔍' }
+  { id: 'time', label: 'Time Analytics', icon: '⏱️' }
 ];
 
 export default function AnalyticsDashboard() {
@@ -670,14 +669,24 @@ export default function AnalyticsDashboard() {
 
         {/* Category Comparison Radar Chart */}
         <div className="bg-white rounded-xl shadow-lg p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Category Comparison</h3>
+          <div className="mb-4">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Category Performance Comparison</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              This radar chart shows the average performance percentage across all business health categories. 
+              Each axis represents a category, and the filled area shows how well users are performing in each area. 
+              A larger area indicates better overall business health across all categories.
+            </p>
+          </div>
           <ResponsiveContainer width="100%" height={400}>
             <RadarChart data={categoryChartData}>
               <PolarGrid />
               <PolarAngleAxis dataKey="category" />
               <PolarRadiusAxis angle={90} domain={[0, 100]} />
               <Radar name="Average %" dataKey="percentage" stroke="#10b981" fill="#10b981" fillOpacity={0.6} />
-              <Tooltip />
+              <Tooltip 
+                formatter={(value) => `${value}%`}
+                labelStyle={{ fontWeight: 'bold' }}
+              />
               <Legend />
             </RadarChart>
           </ResponsiveContainer>
@@ -730,9 +739,12 @@ export default function AnalyticsDashboard() {
             <div className="text-xs text-gray-500 mt-1">Time between first and last section</div>
           </div>
           <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-purple-500">
-            <div className="text-sm font-medium text-gray-500 mb-1">Total Submissions</div>
+            <div className="text-sm font-medium text-gray-500 mb-1">Total Section Submissions</div>
             <div className="text-3xl font-bold text-gray-900">
               {timeMetrics.completionTimeline.reduce((sum, item) => sum + item.submissions, 0)}
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              ({analyticsData?.totalUsers || 0} users × multiple sections)
             </div>
           </div>
           <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
@@ -853,7 +865,6 @@ export default function AnalyticsDashboard() {
           {activeTab === 'questions' && renderQuestionAnalysis()}
           {activeTab === 'categories' && renderCategoryBreakdown()}
           {activeTab === 'time' && renderTimeAnalytics()}
-          {activeTab === 'compare' && renderComparison()}
         </div>
       </div>
     </div>

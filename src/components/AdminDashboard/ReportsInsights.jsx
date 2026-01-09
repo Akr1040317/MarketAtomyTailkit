@@ -933,11 +933,13 @@ export default function ReportsInsights() {
             <div className="text-xs text-gray-500 mt-1">Time between first and last section</div>
           </div>
           <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-purple-500">
-            <div className="text-sm font-medium text-gray-500 mb-1">Total Submissions</div>
+            <div className="text-sm font-medium text-gray-500 mb-1">Total Section Submissions</div>
             <div className="text-3xl font-bold text-gray-900">
               {timeMetrics.completionTimeline.reduce((sum, item) => sum + item.submissions, 0)}
             </div>
-            <div className="text-xs text-gray-500 mt-1">Across all sections</div>
+            <div className="text-xs text-gray-500 mt-1">
+              ({trendsData?.totalUsers || 0} users × multiple sections)
+            </div>
           </div>
         </div>
 
