@@ -491,7 +491,16 @@ export default function AnalyticsDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Health Level Distribution Pie Chart */}
         <div className="bg-white rounded-xl shadow-lg p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Health Level Distribution</h3>
+          <div className="mb-4">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Health Level Distribution</h3>
+            <p className="text-sm text-gray-600 mb-1">
+              Shows the overall distribution of users across health levels (Low, Medium, High).
+            </p>
+            <p className="text-sm text-gray-500">
+              <strong>What it shows:</strong> This pie chart displays how many users fall into each health category based on their overall business health score. 
+              Low (red) indicates areas needing immediate attention, Medium (yellow) shows moderate health, and High (green) represents strong business health.
+            </p>
+          </div>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
@@ -530,7 +539,16 @@ export default function AnalyticsDashboard() {
 
         {/* Average Scores Per Category Bar Chart */}
         <div className="bg-white rounded-xl shadow-lg p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Average Scores by Category</h3>
+          <div className="mb-4">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Average Scores by Category</h3>
+            <p className="text-sm text-gray-600 mb-1">
+              Displays the average performance percentage for each business health category.
+            </p>
+            <p className="text-sm text-gray-500">
+              <strong>What it shows:</strong> This bar chart compares average scores across all categories. 
+              Higher bars indicate better performance. Use this to quickly identify which categories are performing well and which need improvement.
+            </p>
+          </div>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={categoryChartData}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -547,7 +565,16 @@ export default function AnalyticsDashboard() {
       {/* Category Performance Table */}
       <div className="bg-white rounded-xl shadow-lg p-6">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-bold text-gray-900">Category Performance Details</h3>
+          <div>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Category Performance Details</h3>
+            <p className="text-sm text-gray-600 mb-1">
+              Detailed breakdown of average scores, percentages, and user counts for each category.
+            </p>
+            <p className="text-sm text-gray-500">
+              <strong>What it shows:</strong> This table provides comprehensive metrics for each business health category, 
+              including average scores, percentage performance, and the number of users who have completed assessments in each category.
+            </p>
+          </div>
           <div className="flex gap-2">
             <button
               onClick={handleExportCSV}
@@ -618,7 +645,16 @@ export default function AnalyticsDashboard() {
       <div className="space-y-6">
         {/* Section Performance Table */}
         <div className="bg-white rounded-xl shadow-lg p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Section Performance</h3>
+          <div className="mb-4">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Section Performance</h3>
+            <p className="text-sm text-gray-600 mb-1">
+              Overview of performance metrics for each assessment section.
+            </p>
+            <p className="text-sm text-gray-500">
+              <strong>What it shows:</strong> This table displays average scores, completion rates, total responses, and score distribution 
+              (low/medium/high) for each section. Sections are ordered by their sequence in the assessment.
+            </p>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
@@ -663,7 +699,16 @@ export default function AnalyticsDashboard() {
 
         {/* Section Score Distribution Chart */}
         <div className="bg-white rounded-xl shadow-lg p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Section Score Distribution</h3>
+          <div className="mb-4">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Section Score Distribution</h3>
+            <p className="text-sm text-gray-600 mb-1">
+              Visual comparison of average scores and completion rates across all sections.
+            </p>
+            <p className="text-sm text-gray-500">
+              <strong>What it shows:</strong> This bar chart displays two metrics side-by-side: average scores (blue) and completion rates (green) for each section. 
+              Use this to identify sections with low scores or high drop-off rates that may need content improvements or user support.
+            </p>
+          </div>
           <ResponsiveContainer width="100%" height={500}>
             <BarChart 
               data={sectionChartData}
@@ -699,7 +744,17 @@ export default function AnalyticsDashboard() {
         {/* Most Problematic Sections */}
         {problematicSections.length > 0 && (
           <div className="bg-white rounded-xl shadow-lg p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Sections Needing Attention</h3>
+            <div className="mb-4">
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Sections Needing Attention</h3>
+              <p className="text-sm text-gray-600 mb-1">
+                Sections with the lowest average scores that may require review or improvement.
+              </p>
+              <p className="text-sm text-gray-500">
+                <strong>What it shows:</strong> These are the top 5 sections ranked by lowest average scores. 
+                Consider reviewing these sections for clarity, difficulty, or relevance. Low scores may indicate 
+                that users are struggling with the content or that the questions need refinement.
+              </p>
+            </div>
             <div className="space-y-3">
               {problematicSections.map((section, index) => (
                 <div key={section.name} className="p-4 bg-red-50 rounded-lg border border-red-200">
@@ -786,7 +841,17 @@ export default function AnalyticsDashboard() {
 
         {/* Question Details Table */}
         <div className="bg-white rounded-xl shadow-lg p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">All Questions Analysis</h3>
+          <div className="mb-4">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">All Questions Analysis</h3>
+            <p className="text-sm text-gray-600 mb-1">
+              Comprehensive analysis of all questions including average weights, completion rates, and answer distributions.
+            </p>
+            <p className="text-sm text-gray-500">
+              <strong>What it shows:</strong> This table provides detailed metrics for each question across all sections. 
+              You can see average weight scores, completion percentages, most common answers, and drill down into specific 
+              answer distributions. Use this to identify questions that may be confusing or need clarification.
+            </p>
+          </div>
           <div className="overflow-x-auto max-h-96 overflow-y-auto">
             <table className="w-full">
               <thead className="bg-gray-50 sticky top-0">
@@ -830,7 +895,12 @@ export default function AnalyticsDashboard() {
             onClick={() => setMostAnsweredOpen(!mostAnsweredOpen)}
             className="w-full flex justify-between items-center mb-4"
           >
-            <h3 className="text-lg font-bold text-gray-900">Most Answered Questions</h3>
+            <div className="text-left">
+              <h3 className="text-lg font-bold text-gray-900 mb-1">Most Answered Questions</h3>
+              <p className="text-sm text-gray-500 text-left">
+                Questions with the highest completion rates. These questions are engaging and easy to answer.
+              </p>
+            </div>
             <svg
               className={`w-5 h-5 text-gray-500 transition-transform ${mostAnsweredOpen ? 'rotate-180' : ''}`}
               fill="none"
@@ -866,7 +936,12 @@ export default function AnalyticsDashboard() {
             onClick={() => setMostSkippedOpen(!mostSkippedOpen)}
             className="w-full flex justify-between items-center mb-4"
           >
-            <h3 className="text-lg font-bold text-gray-900">Most Skipped Questions</h3>
+            <div className="text-left">
+              <h3 className="text-lg font-bold text-gray-900 mb-1">Most Skipped Questions</h3>
+              <p className="text-sm text-gray-500 text-left">
+                Questions with the lowest completion rates. These may need clarification or simplification.
+              </p>
+            </div>
             <svg
               className={`w-5 h-5 text-gray-500 transition-transform ${mostSkippedOpen ? 'rotate-180' : ''}`}
               fill="none"
@@ -903,7 +978,12 @@ export default function AnalyticsDashboard() {
               onClick={() => setLowestScoresOpen(!lowestScoresOpen)}
               className="w-full flex justify-between items-center mb-4"
             >
-              <h3 className="text-lg font-bold text-gray-900">Questions with Lowest Average Scores</h3>
+              <div className="text-left">
+                <h3 className="text-lg font-bold text-gray-900 mb-1">Questions with Lowest Average Scores</h3>
+                <p className="text-sm text-gray-500 text-left">
+                  Questions where users consistently select lower-weight options, indicating potential areas of concern.
+                </p>
+              </div>
               <svg
                 className={`w-5 h-5 text-gray-500 transition-transform ${lowestScoresOpen ? 'rotate-180' : ''}`}
                 fill="none"
@@ -995,7 +1075,17 @@ export default function AnalyticsDashboard() {
       <div className="space-y-6">
         {/* Category Percentiles */}
         <div className="bg-white rounded-xl shadow-lg p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Category Score Percentiles</h3>
+          <div className="mb-4">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Category Score Percentiles</h3>
+            <p className="text-sm text-gray-600 mb-1">
+              Statistical breakdown showing score distributions across percentiles for each category.
+            </p>
+            <p className="text-sm text-gray-500">
+              <strong>What it shows:</strong> This table displays percentile scores (25th, median, 75th, 90th) and average scores for each category. 
+              Percentiles help you understand score distribution - for example, if the median is much lower than the average, 
+              it indicates some users have very high scores while many have lower scores.
+            </p>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
@@ -1064,7 +1154,16 @@ export default function AnalyticsDashboard() {
       <div className="space-y-6">
         {/* Registration Trends */}
         <div className="bg-white rounded-xl shadow-lg p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">User Registration Trends</h3>
+          <div className="mb-4">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">User Registration Trends</h3>
+            <p className="text-sm text-gray-600 mb-1">
+              Monthly trend of new user registrations over time.
+            </p>
+            <p className="text-sm text-gray-500">
+              <strong>What it shows:</strong> This line chart tracks the number of new users registering each month. 
+              Use this to identify growth patterns, seasonal trends, or the impact of marketing campaigns on user acquisition.
+            </p>
+          </div>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={timeMetrics.registrationTrends}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -1079,7 +1178,16 @@ export default function AnalyticsDashboard() {
 
         {/* Completion Timeline */}
         <div className="bg-white rounded-xl shadow-lg p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Assessment Completion Timeline</h3>
+          <div className="mb-4">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Assessment Completion Timeline</h3>
+            <p className="text-sm text-gray-600 mb-1">
+              Monthly trend of assessment submissions and unique users completing assessments.
+            </p>
+            <p className="text-sm text-gray-500">
+              <strong>What it shows:</strong> This chart displays two metrics: total section submissions (green) and unique users (orange) 
+              completing assessments each month. Compare these to see if users are completing multiple sections or if completion rates are increasing.
+            </p>
+          </div>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={timeMetrics.completionTimeline}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -1177,7 +1285,17 @@ export default function AnalyticsDashboard() {
         </div>
 
         <div className="bg-white rounded-xl shadow-lg p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Section Drop-off Analysis</h3>
+          <div className="mb-4">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Section Drop-off Analysis</h3>
+            <p className="text-sm text-gray-600 mb-1">
+              <strong>What is Drop-off?</strong> Drop-off shows how many users stopped completing the assessment at each section.
+            </p>
+            <p className="text-sm text-gray-500">
+              <strong>What it shows:</strong> This table compares the number of users who completed the previous section vs. the current section. 
+              Higher drop-off percentages indicate sections where users are more likely to abandon the assessment. 
+              Use this to identify sections that may be too long, difficult, or need better user guidance.
+            </p>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
@@ -1205,7 +1323,16 @@ export default function AnalyticsDashboard() {
         </div>
 
         <div className="bg-white rounded-xl shadow-lg p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Activity Patterns</h3>
+          <div className="mb-4">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Activity Patterns</h3>
+            <p className="text-sm text-gray-600 mb-1">
+              Distribution of assessment activity by day of the week.
+            </p>
+            <p className="text-sm text-gray-500">
+              <strong>What it shows:</strong> This visualization shows when users are most active completing assessments. 
+              Understanding activity patterns helps you schedule communications, support, or follow-ups at optimal times.
+            </p>
+          </div>
           <div>
             <h4 className="text-sm font-medium text-gray-700 mb-3">By Day of Week</h4>
             <div className="space-y-2">
@@ -1297,10 +1424,16 @@ export default function AnalyticsDashboard() {
     return (
       <div className="space-y-6">
         <div className="bg-white rounded-xl shadow-lg p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">At-Risk Users</h3>
-          <p className="text-gray-600 mb-4">
-            Users with low scores in critical categories (Foundational Structure, Financial Position)
-          </p>
+          <div className="mb-4">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">At-Risk Users</h3>
+            <p className="text-sm text-gray-600 mb-1">
+              Users with low scores in critical categories (Foundational Structure, Financial Position).
+            </p>
+            <p className="text-sm text-gray-500">
+              <strong>What it shows:</strong> These users have low health scores in critical business categories that require immediate attention. 
+              Consider proactive outreach, additional resources, or personalized support to help improve their business health.
+            </p>
+          </div>
           <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
             <div className="text-3xl font-bold text-red-600 mb-2">{atRiskUsers.length}</div>
             <div className="text-sm text-gray-700">Users identified as at-risk</div>
@@ -1332,10 +1465,19 @@ export default function AnalyticsDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {improvingCategories.length > 0 && (
             <div className="bg-white rounded-xl shadow-lg p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <span className="text-green-500">📈</span>
-                Improving Categories
-              </h3>
+              <div className="mb-4">
+                <h3 className="text-lg font-bold text-gray-900 mb-2 flex items-center gap-2">
+                  <span className="text-green-500">📈</span>
+                  Improving Categories
+                </h3>
+                <p className="text-sm text-gray-600 mb-1">
+                  Categories where a high percentage of users have strong performance.
+                </p>
+                <p className="text-sm text-gray-500">
+                  <strong>What it shows:</strong> These categories show positive trends with 40%+ of users achieving high health scores. 
+                  Use these as success examples and identify what's working well to apply to other categories.
+                </p>
+              </div>
               <div className="space-y-3">
                 {improvingCategories.map((item, index) => (
                   <div key={index} className="p-3 bg-green-50 rounded-lg border border-green-200">
@@ -1351,10 +1493,19 @@ export default function AnalyticsDashboard() {
 
           {decliningCategories.length > 0 && (
             <div className="bg-white rounded-xl shadow-lg p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <span className="text-red-500">📉</span>
-                Categories Needing Attention
-              </h3>
+              <div className="mb-4">
+                <h3 className="text-lg font-bold text-gray-900 mb-2 flex items-center gap-2">
+                  <span className="text-red-500">📉</span>
+                  Categories Needing Attention
+                </h3>
+                <p className="text-sm text-gray-600 mb-1">
+                  Categories where a high percentage of users have low performance.
+                </p>
+                <p className="text-sm text-gray-500">
+                  <strong>What it shows:</strong> These categories have 60%+ of users with low health scores, indicating widespread challenges. 
+                  Prioritize these areas for targeted resources, training, or support programs.
+                </p>
+              </div>
               <div className="space-y-3">
                 {decliningCategories.map((item, index) => (
                   <div key={index} className="p-3 bg-red-50 rounded-lg border border-red-200">
@@ -1370,7 +1521,16 @@ export default function AnalyticsDashboard() {
         </div>
 
         <div className="bg-white rounded-xl shadow-lg p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Recommendations</h3>
+          <div className="mb-4">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Recommendations</h3>
+            <p className="text-sm text-gray-600 mb-1">
+              Actionable insights and recommendations based on current analytics data.
+            </p>
+            <p className="text-sm text-gray-500">
+              <strong>What it shows:</strong> This section provides automated recommendations based on your analytics. 
+              It highlights focus areas, at-risk users, and positive trends to help you prioritize actions and resources effectively.
+            </p>
+          </div>
           <div className="space-y-3">
             {recommendations.map((rec, index) => (
               <div 
