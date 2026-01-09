@@ -5,14 +5,12 @@ import { db } from '../../firebaseConfig';
 import { useNavigate } from 'react-router-dom';
 import UserManagement from './UserManagement';
 import AnalyticsDashboard from './AnalyticsDashboard';
-import ReportsInsights from './ReportsInsights';
 import ContentManagement from './ContentManagement';
 import SystemMonitoring from './SystemMonitoring';
 
 const TABS = [
   { id: 'users', label: 'User Management', icon: '👥' },
-  { id: 'analytics', label: 'Analytics', icon: '📊' },
-  { id: 'reports', label: 'Reports & Insights', icon: '📈' },
+  { id: 'analytics', label: 'Analytics & Reports', icon: '📊' },
   { id: 'content', label: 'Content Management', icon: '📚' },
   { id: 'monitoring', label: 'System Monitoring', icon: '🔍' },
 ];
@@ -83,8 +81,6 @@ export default function AdminDashboard() {
         return <UserManagement />;
       case 'analytics':
         return <AnalyticsDashboard />;
-      case 'reports':
-        return <ReportsInsights />;
       case 'content':
         return <ContentManagement />;
       case 'monitoring':
