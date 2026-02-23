@@ -13,6 +13,7 @@ import Dashboard from "./Dashboard.jsx";
 import Assessment from "./Assessment.jsx";
 import AssessmentUser from "./AssessmentUser.jsx";
 import AdminDashboard from "./components/AdminDashboard/AdminDashboard.jsx";
+import Reports from "./Reports.jsx";
 
 export default function DarkSidebarWithSideContentLeft() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -508,11 +509,13 @@ export default function DarkSidebarWithSideContentLeft() {
           {/* The active view now entirely manages its own side content */}
           <div className="mx-auto flex w-full max-w-10xl grow flex-col p-4 lg:p-8">
             {activeView === "dashboard" ? (
-              <Dashboard />
+              <Dashboard setActiveView={setActiveView} />
             ) : activeView === "assessment" ? (
               <Assessment />
             ) : activeView === "adminDashboard" ? (
               <AdminDashboard />
+            ) : activeView === "reports" ? (
+              <Reports />
             ) : (
               <AssessmentUser />
             )}

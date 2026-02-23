@@ -68,12 +68,13 @@ const RoadmapStep = ({ step, label, isActive }) => (
   </div>
 );
 
-export default function Dashboard() {
+export default function Dashboard({ setActiveView }) {
   const [computedScores, setComputedScores] = useState(null);
   const [enhancedScores, setEnhancedScores] = useState(null);
   const [completedSections, setCompletedSections] = useState([]);
   const [totalSections, setTotalSections] = useState(0);
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [userRole, setUserRole] = useState("");
   const auth = getAuth();
   const user = auth.currentUser;
 
@@ -90,6 +91,7 @@ export default function Dashboard() {
           const userData = userDocSnap.data();
           const rawScores = userData.computedScores || {};
           setComputedScores(rawScores);
+          setUserRole(userData.role || "");
           
           // Process scores with analytics
           const processed = processComputedScores(rawScores);
@@ -245,8 +247,10 @@ export default function Dashboard() {
                 href="#"
                 onClick={(e) => {
                   e.preventDefault();
-                  // Navigate to assessment
-                  window.location.hash = "#assessment";
+                  // Navigate to assessment based on user role
+                  if (setActiveView) {
+                    setActiveView(userRole === "admin" ? "assessment" : "assessmentUser");
+                  }
                 }}
                 className="text-emerald-600 hover:text-emerald-700 font-semibold underline"
               >
@@ -280,6 +284,7 @@ export default function Dashboard() {
               </div>
               <div className="mt-6 flex justify-end gap-4">
                 <button
+                  onClick={() => setActiveView && setActiveView("reports")}
                   className="px-6 py-3 bg-emerald-500 text-white rounded-lg font-semibold hover:bg-emerald-600 transition-colors shadow-lg hover:shadow-xl"
                 >
                   View Full Report
