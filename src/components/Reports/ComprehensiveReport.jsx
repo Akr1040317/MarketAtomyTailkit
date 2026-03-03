@@ -109,7 +109,20 @@ export default function ComprehensiveReport({ enhancedScores }) {
                         </p>
                         <ul className="list-disc list-inside text-xs text-gray-600 space-y-1">
                           {item.resources.map((resource, rIndex) => (
-                            <li key={rIndex}>{resource.title}</li>
+                            <li key={rIndex}>
+                              {resource.url ? (
+                                <a
+                                  href={resource.url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-emerald-700 hover:text-emerald-800 underline"
+                                >
+                                  {resource.title}
+                                </a>
+                              ) : (
+                                resource.title
+                              )}
+                            </li>
                           ))}
                         </ul>
                       </div>

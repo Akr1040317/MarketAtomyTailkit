@@ -322,6 +322,250 @@ export const REPORT_CONTENT = {
   },
 };
 
+// Updated resource URLs + additional resources (2026 refresh).
+// These are merged into the base REPORT_CONTENT resources by category.
+const RESOURCE_OVERRIDES = {
+  general: [
+    {
+      title: "Fighting O.P.A.: Understanding Overwhelm, Paralysis, and Avoidance",
+      description:
+        "A short video to help you recognize OPA (Overwhelm, Paralysis, Avoidance) and break the cycle.",
+      type: "video",
+      url: "https://www.marketatomy.com/wp-content/uploads/2026/03/MA-OPA-Video-60.mp4",
+    },
+    {
+      title: "OPA Coaching Session",
+      description:
+        "Register for FREE 30-minute coaching session designed to identify symptoms of OPA",
+      type: "session",
+      url: "https://calendly.com/dannaolivo/discovery",
+    },
+    {
+      title: "Stop the Self-Sabotage",
+      description: "A quick-read guide to identify and stop common patterns of self-sabotage.",
+      type: "download",
+      url: "https://www.marketatomy.com/wp-content/uploads/2026/03/Stop-the-Self-Sabotage.pdf",
+    },
+    {
+      title: "Assessment Debrief",
+      description:
+        "Schedule an Assessment Debrief with one of our Coaches to explore how to strengthen your overall business infrastructure",
+      type: "session",
+      url: "https://calendly.com/dannaolivo/bhc-1-on-1-consult",
+    },
+    {
+      title: "FREE Discovery Session",
+      description: "Reach out to schedule a FREE discovery session",
+      type: "session",
+      url: "https://calendly.com/dannaolivo/discovery",
+    },
+    {
+      title: "Online Learning Academy",
+      description: "Browse courses and trainings inside the MarketAtomy Online Learning Academy.",
+      type: "program",
+      url: "https://marketatomy.academy",
+    },
+  ],
+
+  foundationalStructure: [
+    {
+      title: "Business Conceptualization Strategy",
+      description: "Clarify your current situation and define your business concept and strategy.",
+      type: "download",
+      url: "https://www.marketatomy.com/wp-content/uploads/2026/03/Current-Situation.pdf",
+    },
+    {
+      title: "S.W.O.T. Analysis Tool",
+      description: "Download our S.W.O.T. Analysis planning tool",
+      type: "download",
+      url: "https://www.marketatomy.com/wp-content/uploads/2026/03/SWOT-Analysis.pdf",
+    },
+    {
+      title: "Side Hustle Video",
+      description: "A short video to help you think through turning your side hustle into your main hustle.",
+      type: "video",
+      url: "https://www.marketatomy.com/wp-content/uploads/2026/03/Side-Hustle-Promo.mp4",
+    },
+    {
+      title: "Superior Business Planning",
+      description: "A practical guide to building a strong business plan you can execute.",
+      type: "download",
+      url: "https://www.marketatomy.com/wp-content/uploads/2026/03/Superior-Business-Planning.pdf",
+    },
+    {
+      title: "5 Pitfalls to Avoid When Writing a Business Plan",
+      description: "Short course: common pitfalls to avoid when writing your business plan.",
+      type: "program",
+      url: "https://marketatomy.academy/courses/5-pitfalls-to-avoid-when-writing-a-business-plan/",
+    },
+    {
+      title: "Assessment Debrief",
+      description:
+        "Schedule an Assessment Debrief with one of our Coaches to explore how to strengthen your overall business infrastructure",
+      type: "session",
+      url: "https://calendly.com/dannaolivo/bhc-1-on-1-consult",
+    },
+    {
+      title: "FREE Discovery Session",
+      description: "Reach out to schedule a FREE discovery session",
+      type: "session",
+      url: "https://calendly.com/dannaolivo/discovery",
+    },
+  ],
+
+  financialPosition: [
+    {
+      title: "Financial Expert Consultation",
+      description:
+        "Schedule an appointment with one of our financial experts to explore the options and process for equity investment",
+      type: "session",
+      url: "https://calendly.com/dannaolivo/bhc-financial-expert-consultation",
+    },
+    {
+      title: "Business Funding Resource Guide",
+      description: "Download our FREE eBook “Business Funding Resource Guide”",
+      type: "download",
+      url: "https://www.marketatomy.com/wp-content/uploads/2019/04/Business-Funding-eBook.pdf",
+    },
+    {
+      title: "Cashflow is King eBook",
+      description: "Download our FREE eBook “Cashflow is King”",
+      type: "download",
+      url: "https://www.marketatomy.com/wp-content/uploads/2026/03/CashFLOW-Is-King.pdf",
+    },
+    {
+      title: "Credit 101 eBook",
+      description: "Download our FREE eBook “Credit 101”",
+      type: "download",
+      url: "https://www.marketatomy.com/wp-content/uploads/2017/12/Credit-101-eBook.pdf",
+    },
+    {
+      title: "Assessment Debrief",
+      description:
+        "Schedule an Assessment Debrief with one of our Coaches to explore how to strengthen your overall business infrastructure",
+      type: "session",
+      url: "https://calendly.com/dannaolivo/bhc-1-on-1-consult",
+    },
+    {
+      title: "FREE Discovery Session",
+      description: "Reach out to schedule a FREE discovery session",
+      type: "session",
+      url: "https://calendly.com/dannaolivo/discovery",
+    },
+  ],
+
+  productService: [
+    {
+      title: "What to Expect When Expecting A Business",
+      description: "A guide to help you understand what to expect as you grow your business.",
+      type: "download",
+      url: "https://www.marketatomy.com/wp-content/uploads/2026/03/MarketAtomyFinal.pdf",
+    },
+    {
+      title: "Competitive Analysis Tool",
+      description: "Competitive Analysis planning tool to benchmark against competitors",
+      type: "download",
+      url: "https://www.marketatomy.com/wp-content/uploads/2026/03/Benchmarking-Approach.mp4",
+    },
+    {
+      title: "Become A Customer Magnet",
+      description: "“How to Become a Customer Magnet” webinar series (resource pack)",
+      type: "webinar",
+      url: "https://www.marketatomy.com/wp-content/uploads/2020/07/Customer-Magnet-Book-Final.pdf",
+    },
+    {
+      title: "Customer Identification Tool",
+      description: "Download our Customer Identification planning tool",
+      type: "download",
+      url: "https://www.marketatomy.com/wp-content/uploads/2026/03/Customer-Profiling-Worksheet.jpg",
+    },
+    {
+      title: "Social or Sociopathic",
+      description: "A short read on building a healthy social strategy without the pitfalls.",
+      type: "download",
+      url: "https://www.marketatomy.com/wp-content/uploads/2026/03/Final-Proof-.pdf",
+    },
+    {
+      title: "Assessment Debrief",
+      description:
+        "Schedule an Assessment Debrief with one of our Coaches to explore how to strengthen your overall business infrastructure",
+      type: "session",
+      url: "https://calendly.com/dannaolivo/bhc-1-on-1-consult",
+    },
+    {
+      title: "FREE Discovery Session",
+      description: "Reach out to schedule a FREE discovery session",
+      type: "session",
+      url: "https://calendly.com/dannaolivo/discovery",
+    },
+  ],
+
+  salesMarketing: [
+    {
+      title: "Annual Marketing Strategy",
+      description: "A workbook to map out your annual marketing strategy.",
+      type: "download",
+      url: "https://www.marketatomy.com/wp-content/uploads/2026/03/Annual-Marketing-Strategy-WB.pdf",
+    },
+    {
+      title: "Demand Analysis Worksheet",
+      description: "Download MarketAtomy’s Demand Analysis Worksheet",
+      type: "download",
+      url: "https://www.marketatomy.com/wp-content/uploads/2026/03/Demand-Analysis-WkSht.pdf",
+    },
+    {
+      title: "Market Analysis Tool",
+      description: "Download MarketAtomy’s Market Analysis planning tool",
+      type: "download",
+      url: "https://www.marketatomy.com/wp-content/uploads/2026/03/Market-Analysis-Work-Chart.pdf",
+    },
+    {
+      title: "Environment Analysis Worksheet",
+      description: "Download MarketAtomy’s Environment Analysis Worksheet",
+      type: "download",
+      url: "https://www.marketatomy.com/wp-content/uploads/2026/03/environmental-analysis.pdf",
+    },
+    {
+      title: "Marketing Gap Analysis Tool",
+      description: "Download MarketAtomy’s Marketing Gap Analysis Tool",
+      type: "download",
+      url: "https://www.marketatomy.com/wp-content/uploads/2026/03/Marketing-Gap-Analysis-Worksheet.jpg",
+    },
+    {
+      title: "Assessment Debrief",
+      description:
+        "Schedule an Assessment Debrief with one of our Coaches to explore how to strengthen your overall business infrastructure",
+      type: "session",
+      url: "https://calendly.com/dannaolivo/bhc-1-on-1-consult",
+    },
+    {
+      title: "FREE Discovery Session",
+      description: "Reach out to schedule a FREE discovery session",
+      type: "session",
+      url: "https://calendly.com/dannaolivo/discovery",
+    },
+  ],
+};
+
+function mergeResources(baseResources = [], overrideResources = []) {
+  const merged = new Map();
+
+  // Add base first
+  baseResources.forEach((r) => {
+    if (!r?.title) return;
+    merged.set(r.title, { ...r });
+  });
+
+  // Apply overrides (updates fields like url/description/type) and add new resources
+  overrideResources.forEach((r) => {
+    if (!r?.title) return;
+    const existing = merged.get(r.title);
+    merged.set(r.title, existing ? { ...existing, ...r } : { ...r });
+  });
+
+  return Array.from(merged.values());
+}
+
 /**
  * Get report content for a category and health level
  * @param {string} categoryKey - Category key
@@ -347,7 +591,13 @@ export function getCategoryReport(categoryKey, healthLevel) {
     };
   }
 
-  return category[reportKey] || category.needsTweaking;
+  const base = category[reportKey] || category.needsTweaking;
+  const overrides = RESOURCE_OVERRIDES[categoryKey] || [];
+
+  return {
+    ...base,
+    resources: mergeResources(base.resources || [], overrides),
+  };
 }
 
 /**

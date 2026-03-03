@@ -413,9 +413,11 @@ export default function Dashboard({ setActiveView }) {
               {recommendedResources.map((resource, index) => (
                 <a
                   key={index}
-                  href="#"
+                  href={resource.url || "#"}
+                  target={resource.url ? "_blank" : undefined}
+                  rel={resource.url ? "noreferrer" : undefined}
                   onClick={(e) => {
-                    e.preventDefault();
+                    if (!resource.url) e.preventDefault();
                   }}
                   className="bg-gray-800/50 backdrop-blur-sm p-8 rounded-xl text-gray-100 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:bg-gray-700/50 border border-gray-700 hover:border-emerald-500"
                 >

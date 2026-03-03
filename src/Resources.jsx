@@ -141,10 +141,11 @@ export default function Resources() {
                   {resourcesByType[type].map((resource, index) => (
                     <a
                       key={index}
-                      href="#"
+                      href={resource.url || "#"}
+                      target={resource.url ? "_blank" : undefined}
+                      rel={resource.url ? "noreferrer" : undefined}
                       onClick={(e) => {
-                        e.preventDefault();
-                        // Handle resource click
+                        if (!resource.url) e.preventDefault();
                       }}
                       className="group p-6 bg-gray-50 rounded-xl border-2 border-gray-200 hover:border-emerald-500 hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
                     >
