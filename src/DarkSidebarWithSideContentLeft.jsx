@@ -41,6 +41,11 @@ export default function DarkSidebarWithSideContentLeft() {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setUserEmail(user.email || "");
+        // Default Danna into Admin view for presentations.
+        if ((user.email || "").toLowerCase() === "dannaolivo@gmail.com") {
+          setViewModeOverride("admin");
+          setActiveView("adminDashboard");
+        }
         try {
           const docRef = doc(db, "users", user.uid);
           const docSnap = await getDoc(docRef);
@@ -48,8 +53,13 @@ export default function DarkSidebarWithSideContentLeft() {
             const userData = docSnap.data();
             setFirstName(userData.firstName || "");
             setUserRole(userData.role || "");
-            // Default to dashboard view for all users
-            setActiveView("dashboard");
+            // Default home screen:
+            // - Admin view: Admin Dashboard
+            // - Client view: Dashboard
+            const shouldGoAdminHome =
+              (user.email || "").toLowerCase() === "dannaolivo@gmail.com" ||
+              userData.role === "admin";
+            setActiveView(shouldGoAdminHome ? "adminDashboard" : "dashboard");
           }
         } catch (error) {
           console.error("Error fetching user data: ", error);
@@ -133,38 +143,40 @@ export default function DarkSidebarWithSideContentLeft() {
           <div className="overflow-y-auto flex flex-col h-full">
             <div className="w-full p-4 flex-1">
               <nav className="space-y-2">
-                {/* Dashboard Link */}
-                <a
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setActiveView("dashboard");
-                  }}
-                  className={`group flex items-center gap-3 rounded-lg border border-transparent px-3 py-3 text-base font-medium transition-all ${
-                    activeView === "dashboard"
-                      ? "bg-gray-700/75 text-white shadow-md"
-                      : "text-gray-200 hover:bg-gray-700/75 hover:text-white active:border-gray-600"
-                  }`}
-                >
-                  <span className="flex flex-none items-center">
-                    <svg
-                      className="hi-outline hi-home inline-block size-6"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth="1.5"
-                      stroke="currentColor"
-                      aria-hidden="true"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"
-                      />
-                    </svg>
-                  </span>
-                  <span className="grow">Dashboard</span>
-                </a>
+                {/* Dashboard Link - Client view only */}
+                {effectiveUserRole !== "admin" && (
+                  <a
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setActiveView("dashboard");
+                    }}
+                    className={`group flex items-center gap-3 rounded-lg border border-transparent px-3 py-3 text-base font-medium transition-all ${
+                      activeView === "dashboard"
+                        ? "bg-gray-700/75 text-white shadow-md"
+                        : "text-gray-200 hover:bg-gray-700/75 hover:text-white active:border-gray-600"
+                    }`}
+                  >
+                    <span className="flex flex-none items-center">
+                      <svg
+                        className="hi-outline hi-home inline-block size-6"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth="1.5"
+                        stroke="currentColor"
+                        aria-hidden="true"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"
+                        />
+                      </svg>
+                    </span>
+                    <span className="grow">Dashboard</span>
+                  </a>
+                )}
 
                 {/* Assessment Link: Render different options based on user role */}
                 {effectiveUserRole === "admin" ? (
@@ -234,7 +246,7 @@ export default function DarkSidebarWithSideContentLeft() {
                 )}
 
 
-                {/* Admin Dashboard Link - Only visible to admins */}
+                {/* Admin Dashboard Link - Admin view only */}
                 {effectiveUserRole === "admin" && (
                   <a
                     href="#"
@@ -450,7 +462,7 @@ export default function DarkSidebarWithSideContentLeft() {
                     type="button"
                     onClick={() => {
                       setViewModeOverride("admin");
-                      if (activeView === "assessmentUser") setActiveView("dashboard");
+                      setActiveView("adminDashboard");
                     }}
                     className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
                       effectiveViewMode === "admin"
@@ -464,8 +476,7 @@ export default function DarkSidebarWithSideContentLeft() {
                     type="button"
                     onClick={() => {
                       setViewModeOverride("client");
-                      if (activeView === "adminDashboard" || activeView === "assessment")
-                        setActiveView("dashboard");
+                      setActiveView("dashboard");
                     }}
                     className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
                       effectiveViewMode === "client"
