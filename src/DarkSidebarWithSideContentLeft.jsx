@@ -25,14 +25,17 @@ export default function DarkSidebarWithSideContentLeft() {
   // State to hold the user's role (admin, tier1, tier2, tier3, etc.)
   const [userRole, setUserRole] = useState("");
   const [userEmail, setUserEmail] = useState("");
+  const [viewModeOverride, setViewModeOverride] = useState(null); // "admin" | "client" | null
   // Modal states
   const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
   const [bugReportModalOpen, setBugReportModalOpen] = useState(false);
 
   const navigate = useNavigate();
-  const isAdminMode =
-    userRole === "admin" ||
-    (userEmail || "").toLowerCase() === "dannaolivo@gmail.com";
+  const isDanna = (userEmail || "").toLowerCase() === "dannaolivo@gmail.com";
+  const effectiveViewMode =
+    viewModeOverride || (userRole === "admin" ? "admin" : "client");
+  const effectiveUserRole = effectiveViewMode === "admin" ? "admin" : "tier1";
+  const isAdminMode = effectiveViewMode === "admin" && (isDanna || userRole === "admin");
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -55,6 +58,7 @@ export default function DarkSidebarWithSideContentLeft() {
         setFirstName("");
         setUserRole("");
         setUserEmail("");
+        setViewModeOverride(null);
       }
     });
     return () => unsubscribe();
@@ -163,7 +167,7 @@ export default function DarkSidebarWithSideContentLeft() {
                 </a>
 
                 {/* Assessment Link: Render different options based on user role */}
-                {userRole === "admin" ? (
+                {effectiveUserRole === "admin" ? (
                   <a
                     href="#"
                     onClick={(e) => {
@@ -231,7 +235,7 @@ export default function DarkSidebarWithSideContentLeft() {
 
 
                 {/* Admin Dashboard Link - Only visible to admins */}
-                {userRole === "admin" && (
+                {effectiveUserRole === "admin" && (
                   <a
                     href="#"
                     onClick={(e) => {
@@ -433,11 +437,46 @@ export default function DarkSidebarWithSideContentLeft() {
             {/* Center Section (Large Screens) */}
             <div className="hidden lg:flex flex-1 justify-center">
               <span className="text-xl text-white font-semibold">
-                {`Welcome to the BHC${userRole === "admin" ? " (Admin Portal)" : ""}`}
+                {`Welcome to the BHC${
+                  effectiveViewMode === "admin" ? " (Admin View)" : " (Client View)"
+                }`}
               </span>
             </div>
             {/* Right Section */}
             <div className="flex items-center gap-2">
+              {isDanna && (
+                <div className="hidden sm:inline-flex items-center rounded-lg border border-emerald-500/30 bg-gray-800/40 p-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setViewModeOverride("admin");
+                      if (activeView === "assessmentUser") setActiveView("dashboard");
+                    }}
+                    className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
+                      effectiveViewMode === "admin"
+                        ? "bg-emerald-500 text-gray-900"
+                        : "text-gray-200 hover:bg-gray-700/60"
+                    }`}
+                  >
+                    Admin
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setViewModeOverride("client");
+                      if (activeView === "adminDashboard" || activeView === "assessment")
+                        setActiveView("dashboard");
+                    }}
+                    className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
+                      effectiveViewMode === "client"
+                        ? "bg-white text-gray-900"
+                        : "text-gray-200 hover:bg-gray-700/60"
+                    }`}
+                  >
+                    Client
+                  </button>
+                </div>
+              )}
               {isAdminMode && (
                 <span className="hidden sm:inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-200 border border-emerald-500/30">
                   Admin Mode
@@ -521,7 +560,7 @@ export default function DarkSidebarWithSideContentLeft() {
           {/* The active view now entirely manages its own side content */}
           <div className="mx-auto flex w-full max-w-10xl grow flex-col p-4 lg:p-8">
             {activeView === "dashboard" ? (
-              <Dashboard setActiveView={setActiveView} />
+              <Dashboard setActiveView={setActiveView} viewMode={effectiveViewMode} />
             ) : activeView === "assessment" ? (
               <Assessment />
             ) : activeView === "adminDashboard" ? (

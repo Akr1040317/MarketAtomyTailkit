@@ -68,15 +68,15 @@ const RoadmapStep = ({ step, label, isActive }) => (
   </div>
 );
 
-export default function Dashboard({ setActiveView }) {
+export default function Dashboard({ setActiveView, viewMode }) {
   const [computedScores, setComputedScores] = useState(null);
   const [enhancedScores, setEnhancedScores] = useState(null);
   const [completedSections, setCompletedSections] = useState([]);
   const [totalSections, setTotalSections] = useState(0);
   const [lastUpdated, setLastUpdated] = useState(null);
-  const [userRole, setUserRole] = useState("");
   const auth = getAuth();
   const user = auth.currentUser;
+  const isAdminView = viewMode === "admin";
 
   // Fetch user's computed scores and progress
   useEffect(() => {
@@ -91,7 +91,6 @@ export default function Dashboard({ setActiveView }) {
           const userData = userDocSnap.data();
           const rawScores = userData.computedScores || {};
           setComputedScores(rawScores);
-          setUserRole(userData.role || "");
           
           // Process scores with analytics
           const processed = processComputedScores(rawScores);
@@ -249,7 +248,7 @@ export default function Dashboard({ setActiveView }) {
                   e.preventDefault();
                   // Navigate to assessment based on user role
                   if (setActiveView) {
-                    setActiveView(userRole === "admin" ? "assessment" : "assessmentUser");
+                    setActiveView(isAdminView ? "assessment" : "assessmentUser");
                   }
                 }}
                 className="text-emerald-600 hover:text-emerald-700 font-semibold underline"
