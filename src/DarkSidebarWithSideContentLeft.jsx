@@ -24,15 +24,20 @@ export default function DarkSidebarWithSideContentLeft() {
   const [firstName, setFirstName] = useState("");
   // State to hold the user's role (admin, tier1, tier2, tier3, etc.)
   const [userRole, setUserRole] = useState("");
+  const [userEmail, setUserEmail] = useState("");
   // Modal states
   const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
   const [bugReportModalOpen, setBugReportModalOpen] = useState(false);
 
   const navigate = useNavigate();
+  const isAdminMode =
+    userRole === "admin" ||
+    (userEmail || "").toLowerCase() === "dannaolivo@gmail.com";
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
+        setUserEmail(user.email || "");
         try {
           const docRef = doc(db, "users", user.uid);
           const docSnap = await getDoc(docRef);
@@ -48,6 +53,8 @@ export default function DarkSidebarWithSideContentLeft() {
         }
       } else {
         setFirstName("");
+        setUserRole("");
+        setUserEmail("");
       }
     });
     return () => unsubscribe();
@@ -431,6 +438,11 @@ export default function DarkSidebarWithSideContentLeft() {
             </div>
             {/* Right Section */}
             <div className="flex items-center gap-2">
+              {isAdminMode && (
+                <span className="hidden sm:inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-200 border border-emerald-500/30">
+                  Admin Mode
+                </span>
+              )}
               {/* User Dropdown */}
               <Menu as="div" className="relative inline-block">
                 <MenuButton className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm leading-5 font-semibold text-gray-800 hover:border-gray-300 hover:text-gray-900 hover:shadow-xs focus:ring-3 focus:ring-gray-300/25 active:border-gray-200 active:shadow-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-gray-600 dark:hover:text-gray-200 dark:focus:ring-gray-600/40 dark:active:border-gray-700">
