@@ -74,8 +74,9 @@ export function getHealthLevelLabel(level) {
  * @param {number} rawScore - Raw score value
  * @returns {object} Analytics object with normalized score, health level, etc.
  */
-export function calculateCategoryAnalytics(categoryKey, rawScore) {
-  const maxPossible = getCategoryMaxScore(categoryKey);
+export function calculateCategoryAnalytics(categoryKey, rawScore, maxPossibleOverride) {
+  const maxPossible =
+    typeof maxPossibleOverride === "number" ? maxPossibleOverride : getCategoryMaxScore(categoryKey);
   const healthLevel = determineHealthLevel(categoryKey, rawScore);
   const percentage = normalizeScore(rawScore, maxPossible);
   const healthLabel = getHealthLevelLabel(healthLevel);
@@ -141,9 +142,11 @@ export function processComputedScores(computedScores) {
   categoryKeys.forEach((key) => {
     const categoryData = computedScores[key];
     if (categoryData && typeof categoryData.total === 'number') {
+      const maxPossibleOverride =
+        typeof categoryData.maxPossible === "number" ? categoryData.maxPossible : undefined;
       enhanced[key] = {
         ...categoryData,
-        ...calculateCategoryAnalytics(key, categoryData.total),
+        ...calculateCategoryAnalytics(key, categoryData.total, maxPossibleOverride),
       };
     }
   });
