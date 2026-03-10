@@ -178,39 +178,75 @@ export default function DarkSidebarWithSideContentLeft() {
                   </a>
                 )}
 
-                {/* Assessment Link: Render different options based on user role */}
+                {/* Assessment / Admin links */}
                 {effectiveUserRole === "admin" ? (
-                  <a
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setActiveView("assessment");
-                    }}
-                    className={`group flex items-center gap-3 rounded-lg border border-transparent px-3 py-3 text-base font-medium transition-all ${
-                      activeView === "assessment"
-                        ? "bg-gray-700/75 text-white shadow-md"
-                        : "text-gray-200 hover:bg-gray-700/75 hover:text-white active:border-gray-600"
-                    }`}
-                  >
-                    <span className="flex flex-none items-center">
-                      <svg
-                        className="hi-outline inline-block size-6"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        strokeWidth="1.5"
-                        stroke="currentColor"
-                        aria-hidden="true"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
-                        />
-                      </svg>
-                    </span>
-                    <span className="grow">Assessment Management</span>
-                  </a>
+                  <>
+                    {/* Admin Dashboard (top) */}
+                    <a
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setActiveView("adminDashboard");
+                      }}
+                      className={`group flex items-center gap-3 rounded-lg border border-transparent px-3 py-3 text-base font-medium transition-all ${
+                        activeView === "adminDashboard"
+                          ? "bg-gray-700/75 text-white shadow-md"
+                          : "text-gray-200 hover:bg-gray-700/75 hover:text-white active:border-gray-600"
+                      }`}
+                    >
+                      <span className="flex flex-none items-center">
+                        <svg
+                          className="hi-outline inline-block size-6"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          strokeWidth="1.5"
+                          stroke="currentColor"
+                          aria-hidden="true"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"
+                          />
+                        </svg>
+                      </span>
+                      <span className="grow">Admin Dashboard</span>
+                    </a>
+
+                    {/* Assessment Management (below) */}
+                    <a
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setActiveView("assessment");
+                      }}
+                      className={`group flex items-center gap-3 rounded-lg border border-transparent px-3 py-3 text-base font-medium transition-all ${
+                        activeView === "assessment"
+                          ? "bg-gray-700/75 text-white shadow-md"
+                          : "text-gray-200 hover:bg-gray-700/75 hover:text-white active:border-gray-600"
+                      }`}
+                    >
+                      <span className="flex flex-none items-center">
+                        <svg
+                          className="hi-outline inline-block size-6"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          strokeWidth="1.5"
+                          stroke="currentColor"
+                          aria-hidden="true"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
+                          />
+                        </svg>
+                      </span>
+                      <span className="grow">Assessment Management</span>
+                    </a>
+                  </>
                 ) : (
                   <a
                     href="#"
@@ -242,42 +278,6 @@ export default function DarkSidebarWithSideContentLeft() {
                       </svg>
                     </span>
                     <span className="grow">Assessment</span>
-                  </a>
-                )}
-
-
-                {/* Admin Dashboard Link - Admin view only */}
-                {effectiveUserRole === "admin" && (
-                  <a
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setActiveView("adminDashboard");
-                    }}
-                    className={`group flex items-center gap-3 rounded-lg border border-transparent px-3 py-3 text-base font-medium transition-all ${
-                      activeView === "adminDashboard"
-                        ? "bg-gray-700/75 text-white shadow-md"
-                        : "text-gray-200 hover:bg-gray-700/75 hover:text-white active:border-gray-600"
-                    }`}
-                  >
-                    <span className="flex flex-none items-center">
-                      <svg
-                        className="hi-outline inline-block size-6"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        strokeWidth="1.5"
-                        stroke="currentColor"
-                        aria-hidden="true"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"
-                        />
-                      </svg>
-                    </span>
-                    <span className="grow">Admin Dashboard</span>
                   </a>
                 )}
               </nav>
