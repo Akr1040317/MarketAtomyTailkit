@@ -30,11 +30,16 @@ function MoonIcon() {
   );
 }
 
-function AccessIcon() {
+function WalkthroughIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="12" cy="4" r="2" stroke="currentColor" strokeWidth="1.7" />
-      <path d="M12 6v6M8 20l4-4 4 4M7 12h10" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.7" />
+      <path
+        d="M9.5 9.5a2.5 2.5 0 114.2 1.8c-.7.7-1.2 1.1-1.2 2.2M12 17h.01"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
@@ -50,18 +55,11 @@ export default function WorkspaceChrome({
   profileRole,
   profileMeta,
   menuActions,
+  onStartWalkthrough,
+  walkthroughLabel = "Guided walkthrough",
   children,
 }) {
-  const {
-    theme,
-    toggleTheme,
-    reduceMotion,
-    toggleReduceMotion,
-    textScale,
-    cycleTextScale,
-    a11yOpen,
-    setA11yOpen,
-  } = useTheme();
+  const { theme, toggleTheme } = useTheme();
   const chromeRef = useRef(null);
   const [profileOpen, setProfileOpen] = useState(false);
 
@@ -69,12 +67,11 @@ export default function WorkspaceChrome({
     const onDocClick = (event) => {
       if (chromeRef.current && !chromeRef.current.contains(event.target)) {
         setProfileOpen(false);
-        setA11yOpen(false);
       }
     };
     document.addEventListener("mousedown", onDocClick);
     return () => document.removeEventListener("mousedown", onDocClick);
-  }, [setA11yOpen]);
+  }, []);
 
   const initials = `${(firstName || "U").charAt(0)}${(lastName || "").charAt(0)}`.toUpperCase();
   const displayName = firstName ? `${firstName}${lastName ? ` ${lastName}` : ""}` : "User";
@@ -82,7 +79,11 @@ export default function WorkspaceChrome({
   const go = (view) => {
     onNavigate(view);
     setProfileOpen(false);
-    setA11yOpen(false);
+  };
+
+  const startWalkthrough = () => {
+    onStartWalkthrough?.();
+    setProfileOpen(false);
   };
 
   const isActive = (item) => {
@@ -91,12 +92,7 @@ export default function WorkspaceChrome({
   };
 
   return (
-    <div
-      className={`${scopeClass} ma-workspace`}
-      data-theme={theme}
-      data-text-scale={textScale}
-      data-reduce-motion={reduceMotion ? "true" : "false"}
-    >
+    <div className={`${scopeClass} ma-workspace`} data-theme={theme}>
       <div className="dash-chrome" ref={chromeRef}>
         <nav className="htopnav" aria-label="Dashboard">
           <div className="htopnav-row">
@@ -114,6 +110,7 @@ export default function WorkspaceChrome({
               <button
                 type="button"
                 className={`htopnav-theme${theme === "dark" ? " active" : ""}`}
+                data-tour="chrome-theme"
                 onClick={toggleTheme}
                 aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
               >
@@ -124,44 +121,18 @@ export default function WorkspaceChrome({
                 </span>
               </button>
 
-              <div className="htopnav-a11y-wrap">
+              {onStartWalkthrough ? (
                 <button
                   type="button"
-                  className={`htopnav-a11y${a11yOpen ? " open" : ""}`}
-                  aria-label="Accessibility options"
-                  aria-expanded={a11yOpen}
-                  onClick={() => {
-                    setA11yOpen((open) => !open);
-                    setProfileOpen(false);
-                  }}
+                  className="htopnav-walkthrough"
+                  data-tour="chrome-walkthrough"
+                  aria-label={walkthroughLabel}
+                  title={walkthroughLabel}
+                  onClick={startWalkthrough}
                 >
-                  <AccessIcon />
+                  <WalkthroughIcon />
                 </button>
-                {a11yOpen ? (
-                  <div className="htopnav-a11y-menu" role="dialog" aria-label="Accessibility">
-                    <strong>Accessibility</strong>
-                    <div className="a11y-row">
-                      <div>
-                        <b>Text size</b>
-                        <span>{textScale === "large" ? "Large text" : "Standard text"}</span>
-                      </div>
-                      <button type="button" className="btn btn-secondary" onClick={cycleTextScale}>
-                        {textScale === "large" ? "Standard" : "Large"}
-                      </button>
-                    </div>
-                    <div className="a11y-row">
-                      <div>
-                        <b>Reduce motion</b>
-                        <span>Less animation across the dashboard.</span>
-                      </div>
-                      <label className="tsw">
-                        <input type="checkbox" checked={reduceMotion} onChange={toggleReduceMotion} />
-                        <span className="trk" />
-                      </label>
-                    </div>
-                  </div>
-                ) : null}
-              </div>
+              ) : null}
 
               {profileMeta ? <span className="htopnav-meta">{profileMeta}</span> : null}
 
@@ -169,12 +140,10 @@ export default function WorkspaceChrome({
                 <button
                   type="button"
                   className="htopnav-profile"
+                  data-tour="chrome-profile"
                   aria-expanded={profileOpen}
                   aria-haspopup="true"
-                  onClick={() => {
-                    setProfileOpen((open) => !open);
-                    setA11yOpen(false);
-                  }}
+                  onClick={() => setProfileOpen((open) => !open)}
                 >
                   <span className="htopnav-av">{initials}</span>
                   <span className="htopnav-uname">{displayName}</span>
@@ -192,6 +161,11 @@ export default function WorkspaceChrome({
                         <div className="htopnav-menu-level">{profileRole}</div>
                       </div>
                     </div>
+                    {onStartWalkthrough ? (
+                      <button type="button" className="htopnav-menu-item" onClick={startWalkthrough}>
+                        {walkthroughLabel}
+                      </button>
+                    ) : null}
                     {menuActions.map((action) => (
                       <button
                         key={action.label}
@@ -212,13 +186,14 @@ export default function WorkspaceChrome({
           </div>
         </nav>
 
-        <div className="subnav">
+        <div className="subnav" data-tour="chrome-subnav">
           <div className="subnav-row" role="tablist" aria-label="Workspace sections">
             {navItems.map((item) => (
               <button
                 key={item.id}
                 type="button"
                 role="tab"
+                data-tour={`nav-${item.id}`}
                 aria-selected={isActive(item)}
                 className={`stab${isActive(item) ? " on" : ""}`}
                 onClick={() => go(item.id)}

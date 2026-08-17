@@ -1,6 +1,8 @@
 /* MarketAtomy client workspace */
 @import url("https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&display=swap");
 @import "./workspace-chrome.css";
+@import "./assessment-page.css";
+@import "./workspace-tour.css";
 
 .ma-dash {
   --navy: #0b1f4a;
@@ -469,48 +471,6 @@
   .ma-dash .hero-grid { grid-template-columns: 1fr; }
 }
 
-.ma-dash .assessment-page .assessment-stage {
-  display: grid;
-  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
-  gap: 18px;
-  align-items: start;
-}
-
-.ma-dash .assessment-side {
-  position: sticky;
-  top: 12px;
-  max-height: calc(100vh - 150px);
-  overflow: auto;
-}
-
-.ma-dash .assessment-main .question-card { padding: 24px; }
-.ma-dash .assessment-main .answers { display: grid; gap: 10px; }
-.ma-dash .assessment-main .answer {
-  display: grid;
-  grid-template-columns: 32px 1fr auto;
-  gap: 12px;
-  align-items: center;
-  padding: 14px 16px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--surface);
-  text-align: left;
-  cursor: pointer;
-}
-.ma-dash .assessment-main .answer.selected {
-  border-color: rgba(43, 179, 199, 0.7);
-  background: rgba(43, 179, 199, 0.08);
-}
-.ma-dash .form-actions,
-.ma-dash .assessment-main .walkthrough-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: 18px;
-  flex-wrap: wrap;
-}
-.ma-dash .assessment-head .actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .ma-dash .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
 .ma-dash .resource-card { overflow: hidden; padding: 0; }
 .ma-dash .resource-cover {
@@ -534,8 +494,5 @@
   line-height: 1.5;
 }
 .ma-dash .category-copy { font-size: 0.9375rem; color: var(--muted); line-height: 1.6; }
-
-@media (max-width: 980px) {
-  .ma-dash .assessment-page .assessment-stage { grid-template-columns: 1fr; }
-  .ma-dash .assessment-side { position: relative; top: auto; max-height: none; }
-}
+.ma-dash .assessment-head .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.ma-dash .form-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 18px; flex-wrap: wrap; }

@@ -3,6 +3,8 @@ import { collection, getDocs } from "firebase/firestore";
 import { db } from "../firebaseConfig";
 import ToastHost from "./Toast";
 import WorkspaceChrome from "./WorkspaceChrome";
+import WorkspaceTour from "./WorkspaceTour";
+import { ADMIN_TOUR_STEPS } from "../utils/workspaceTourSteps";
 import "../assets/admin-preview.css";
 
 const ADMIN_NAV = [
@@ -29,6 +31,7 @@ export default function AdminWorkspace({
   children,
 }) {
   const [counts, setCounts] = useState({ users: 0, bugs: 0, sections: 0 });
+  const [tourOpen, setTourOpen] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -59,7 +62,6 @@ export default function AdminWorkspace({
 
   const menuActions = [
     { label: "Client Preview", onClick: onSwitchClient },
-    { label: "Admin Guide", onClick: () => setActiveView("adminOnboarding") },
     { label: "Give Feedback", onClick: () => setActiveView("adminFeedback") },
     { label: "Report a Bug", onClick: () => setActiveView("adminBugReport") },
     { label: "Sign out", onClick: onLogout, danger: true },
@@ -77,10 +79,18 @@ export default function AdminWorkspace({
         lastName={lastName}
         profileRole="Administrator"
         profileMeta={`${counts.users} users`}
+        onStartWalkthrough={() => setTourOpen(true)}
+        walkthroughLabel="Admin walkthrough"
         menuActions={menuActions}
       >
         {children}
       </WorkspaceChrome>
+      <WorkspaceTour
+        open={tourOpen}
+        steps={ADMIN_TOUR_STEPS}
+        onClose={() => setTourOpen(false)}
+        onNavigate={setActiveView}
+      />
       <ToastHost />
     </>
   );

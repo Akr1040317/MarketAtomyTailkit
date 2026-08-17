@@ -1,6 +1,7 @@
 /* MarketAtomy admin portal */
 @import url("https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&display=swap");
 @import "./workspace-chrome.css";
+@import "./workspace-tour.css";
 
 .ma-admin {
   --navy: #0b1f4a;

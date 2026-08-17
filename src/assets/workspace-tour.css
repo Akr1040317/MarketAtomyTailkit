@@ -1,0 +1,251 @@
+/* Hive-style spotlight guided walkthrough for MarketAtomy workspaces */
+
+.ma-tour-root {
+  position: relative;
+  z-index: 100100;
+}
+
+.ma-tour-welcome {
+  position: fixed;
+  inset: 0;
+  z-index: 100110;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(8, 14, 30, 0.55);
+  backdrop-filter: blur(4px);
+}
+
+.ma-tour-welcome-card {
+  width: min(920px, 96vw);
+  max-height: min(90vh, 640px);
+  display: grid;
+  grid-template-columns: 1fr 0.95fr;
+  background: #fff;
+  border-radius: 22px;
+  overflow: hidden;
+  box-shadow: 0 28px 70px rgba(8, 14, 30, 0.35);
+  border: 1px solid #e2e7ed;
+}
+
+.ma-tour-welcome-hero {
+  background:
+    radial-gradient(circle at 18% 20%, rgba(255, 255, 255, 0.35), transparent 42%),
+    linear-gradient(160deg, #f5c400, #f26522 58%, #e85a10);
+  color: #0b1f4a;
+  padding: 36px 32px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.ma-tour-welcome-kicker {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(11, 31, 74, 0.12);
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+
+.ma-tour-welcome-hero h2 {
+  margin: 0;
+  font-family: Manrope, sans-serif;
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+}
+
+.ma-tour-welcome-hero p {
+  margin: 14px 0 0;
+  font-size: 1rem;
+  line-height: 1.6;
+  max-width: 34ch;
+}
+
+.ma-tour-welcome-body {
+  padding: 32px 28px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+}
+
+.ma-tour-btn-primary,
+.ma-tour-btn-next {
+  min-height: 44px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #f26522, #f5c400);
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.9375rem;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(242, 101, 34, 0.22);
+}
+
+.ma-tour-btn-skip,
+.ma-tour-btn-back,
+.ma-tour-skip {
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid #e2e7ed;
+  background: #fff;
+  color: #4d5d73;
+  font-weight: 700;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.ma-tour-skip {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 100103;
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.ma-tour-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 100100;
+  background: transparent;
+}
+
+.ma-tour-spot {
+  position: fixed;
+  z-index: 100101;
+  pointer-events: none;
+  box-shadow: 0 0 0 9999px rgba(8, 14, 30, 0.66);
+  border: 2.5px solid #f5c400;
+  transition: all 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ma-tour-tip {
+  position: fixed;
+  z-index: 100102;
+}
+
+.ma-tour-tip-card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(8, 14, 30, 0.42);
+  border: 1px solid #e2e7ed;
+  overflow: hidden;
+}
+
+.ma-tour-progress {
+  height: 4px;
+  background: #f4f7fc;
+}
+
+.ma-tour-progress i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #f26522, #f5c400);
+  transition: width 0.32s ease;
+}
+
+.ma-tour-tip-body {
+  padding: 16px 18px 18px;
+}
+
+.ma-tour-step {
+  display: inline-block;
+  font-size: 0.625rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: #0b1f4a;
+  background: #f5c400;
+  padding: 3px 9px;
+  border-radius: 999px;
+  margin-bottom: 10px;
+}
+
+.ma-tour-title {
+  font-family: Manrope, sans-serif;
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1.25;
+  color: #17243a;
+  margin-bottom: 8px;
+}
+
+.ma-tour-body {
+  color: #5b6b7f;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+.ma-tour-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.ma-tour-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.ma-tour-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #d8e0ea;
+}
+
+.ma-tour-dot.is-on {
+  width: 18px;
+  background: #2e6bb0;
+}
+
+.ma-tour-nav {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+@media (max-width: 720px) {
+  .ma-tour-welcome-card {
+    grid-template-columns: 1fr;
+    max-height: min(92vh, 720px);
+  }
+
+  .ma-tour-welcome-hero {
+    padding: 28px 22px;
+  }
+
+  .ma-tour-welcome-body {
+    padding: 22px;
+  }
+
+  .ma-tour-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ma-tour-nav {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .ma-tour-btn-back,
+  .ma-tour-btn-next {
+    flex: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ma-tour-spot {
+    transition: none;
+  }
+}

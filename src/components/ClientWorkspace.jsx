@@ -4,6 +4,8 @@ import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "../firebaseConfig";
 import ToastHost from "./Toast";
 import WorkspaceChrome from "./WorkspaceChrome";
+import WorkspaceTour from "./WorkspaceTour";
+import { CLIENT_TOUR_STEPS } from "../utils/workspaceTourSteps";
 import "../assets/dashboard-preview.css";
 
 const CLIENT_NAV = [
@@ -26,6 +28,7 @@ export default function ClientWorkspace({
   children,
 }) {
   const [completion, setCompletion] = useState(null);
+  const [tourOpen, setTourOpen] = useState(false);
   const user = getAuth().currentUser;
 
   useEffect(() => {
@@ -76,10 +79,18 @@ export default function ClientWorkspace({
         lastName={lastName}
         profileRole="Client workspace"
         profileMeta={completion ? `${completion.percent}% complete` : null}
+        onStartWalkthrough={() => setTourOpen(true)}
+        walkthroughLabel="Guided walkthrough"
         menuActions={menuActions}
       >
         {children}
       </WorkspaceChrome>
+      <WorkspaceTour
+        open={tourOpen}
+        steps={CLIENT_TOUR_STEPS}
+        onClose={() => setTourOpen(false)}
+        onNavigate={setActiveView}
+      />
       <ToastHost />
     </>
   );

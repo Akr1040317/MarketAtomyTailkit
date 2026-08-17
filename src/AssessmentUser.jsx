@@ -17,7 +17,6 @@ import { db } from "./firebaseConfig";
 import { processComputedScores } from "./utils/analytics";
 import { getCategoryMaxScore } from "./utils/scoreRanges";
 import ToastHost, { toast } from "./components/Toast";
-import "./assets/assessment-walkthrough.css";
 
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
@@ -855,7 +854,7 @@ export default function AssessmentUser({ setActiveView }) {
               <div className="top-context">
                 <div>
                   <div className="eyebrow">{selectedSection?.title || "Assessment"}</div>
-                  <h1>{currentQuestion?.text || selectedSection?.title || "Assessment"}</h1>
+                  <h1>{selectedSection?.title || "Assessment"}</h1>
                   <p>{helper}</p>
                 </div>
                 <div className="question-progress">
