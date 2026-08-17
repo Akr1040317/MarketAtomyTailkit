@@ -7,6 +7,8 @@ import UserManagement from './UserManagement';
 import AnalyticsDashboard from './AnalyticsDashboard';
 import ContentManagement from './ContentManagement';
 import SystemMonitoring from './SystemMonitoring';
+import { Reveal } from '../Reveal';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 
 const TABS = [
   { id: 'users', label: 'User Management', icon: '👥' },
@@ -22,6 +24,7 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
   const auth = getAuth();
   const user = auth.currentUser;
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     const checkAdminAccess = async () => {
@@ -93,13 +96,13 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-gray-100">
       {/* Header */}
-      <div className="bg-gray-800/50 backdrop-blur-sm border-b border-gray-700 px-6 py-4">
+      <Reveal className="bg-gray-800/50 backdrop-blur-sm border-b border-gray-700 px-6 py-4" mode="mount">
         <h1 className="text-3xl font-bold text-white">Admin Dashboard</h1>
         <p className="text-gray-400 mt-1">Manage platform users, analytics, and content</p>
-      </div>
+      </Reveal>
 
       {/* Tab Navigation */}
-      <div className="bg-gray-800/30 backdrop-blur-sm border-b border-gray-700">
+      <Reveal className="bg-gray-800/30 backdrop-blur-sm border-b border-gray-700" mode="mount" delay={0.08}>
         <div className="flex overflow-x-auto px-6">
           {TABS.map((tab) => (
             <button
@@ -116,11 +119,25 @@ export default function AdminDashboard() {
             </button>
           ))}
         </div>
-      </div>
+      </Reveal>
 
       {/* Tab Content */}
       <div className="p-6">
-        {renderActiveTab()}
+        {reduceMotion ? (
+          renderActiveTab()
+        ) : (
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+            >
+              {renderActiveTab()}
+            </motion.div>
+          </AnimatePresence>
+        )}
       </div>
     </div>
   );

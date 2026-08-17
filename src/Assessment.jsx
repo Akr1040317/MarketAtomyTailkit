@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { collection, doc, getDocs, query, orderBy, updateDoc } from "firebase/firestore";
 import { db } from "./firebaseConfig";
+import { Reveal } from "./components/Reveal";
 
 export default function Assessment() {
   const [mobileSideContentOpen, setMobileSideContentOpen] = useState(false);
@@ -179,7 +180,7 @@ export default function Assessment() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-gray-100">
       {/* Header */}
-      <header className="bg-white shadow-lg p-6 sticky top-0 z-10 rounded-2xl">
+      <Reveal as="header" className="bg-white shadow-lg p-6 sticky top-0 z-10 rounded-2xl" mode="mount" direction="none">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
             Admin: Business Health Check Assessment
@@ -191,11 +192,13 @@ export default function Assessment() {
             {mobileSideContentOpen ? "Close" : "Sections"}
           </button>
         </div>
-      </header>
+      </Reveal>
 
       <div className="max-w-7xl mx-auto flex flex-col lg:flex-row p-6 gap-6">
         {/* Sidebar */}
-        <aside
+        <Reveal
+          as="aside"
+          direction="left"
           className={`w-full lg:w-80 bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 transition-all duration-300 ${
             mobileSideContentOpen ? "block" : "hidden lg:block"
           }`}
@@ -235,10 +238,10 @@ export default function Assessment() {
           >
             Add Section
           </button>
-        </aside>
+        </Reveal>
 
         {/* Main Content */}
-        <main className="flex-1 bg-white rounded-2xl shadow-xl p-8">
+        <Reveal as="main" className="flex-1 bg-white rounded-2xl shadow-xl p-8" direction="right" delay={0.08}>
           {selectedSection && editingSection ? (
             <div className="space-y-6">
               {/* Section Header */}
@@ -424,7 +427,7 @@ export default function Assessment() {
               </div>
             </div>
           )}
-        </main>
+        </Reveal>
       </div>
     </div>
   );

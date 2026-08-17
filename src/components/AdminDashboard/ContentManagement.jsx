@@ -1,31 +1,34 @@
-import { useState, useEffect } from 'react';
-import { collection, doc, getDocs, setDoc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
-import { REPORT_CONTENT } from '../../utils/reportContent';
+import { useEffect, useState } from "react";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { db } from "../../firebaseConfig";
+import { REPORT_CONTENT } from "../../utils/reportContent";
+import { toast } from "../Toast";
 
 const CATEGORIES = {
-  foundationalStructure: 'Foundational Structure',
-  financialPosition: 'Financial Strength',
-  salesMarketing: 'Sales & Marketing',
-  productService: 'Product Viability',
-  general: 'Overall Health'
+  foundationalStructure: "Foundational Structure",
+  financialPosition: "Financial Position",
+  salesMarketing: "Sales & Marketing",
+  productService: "Product / Service",
+  general: "General / Work-life",
 };
 
 const HEALTH_LEVELS = {
-  healthy: 'Healthy',
-  unhealthy: 'Needs Attention',
-  needsTweaking: 'Needs Tweaking'
+  healthy: "Healthy",
+  needsTweaking: "Needs Tweaking",
+  unhealthy: "Needs Attention",
 };
 
+function cloneContent(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
 export default function ContentManagement() {
-  const [activeTab, setActiveTab] = useState('resources');
-  const [selectedCategory, setSelectedCategory] = useState('foundationalStructure');
-  const [selectedHealthLevel, setSelectedHealthLevel] = useState('healthy');
-  const [editingResource, setEditingResource] = useState(null);
-  const [editingMessage, setEditingMessage] = useState('');
-  const [reportContent, setReportContent] = useState(REPORT_CONTENT);
+  const [selectedCategory, setSelectedCategory] = useState("foundationalStructure");
+  const [selectedHealthLevel, setSelectedHealthLevel] = useState("needsTweaking");
+  const [reportContent, setReportContent] = useState(cloneContent(REPORT_CONTENT));
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showFallback, setShowFallback] = useState(false);
 
   useEffect(() => {
     loadReportContent();
@@ -34,329 +37,217 @@ export default function ContentManagement() {
   const loadReportContent = async () => {
     try {
       setLoading(true);
-      // Try to load from Firestore, fallback to static content
-      const contentDocRef = doc(db, 'reportContent', 'main');
+      const contentDocRef = doc(db, "reportContent", "main");
       const contentDocSnap = await getDoc(contentDocRef);
-      
       if (contentDocSnap.exists()) {
         setReportContent(contentDocSnap.data());
       } else {
-        // Initialize Firestore with static content
         await setDoc(contentDocRef, REPORT_CONTENT);
+        setReportContent(cloneContent(REPORT_CONTENT));
       }
     } catch (error) {
-      console.error('Error loading report content:', error);
+      console.error("Error loading report content:", error);
+      toast("Could not load report content. Using code fallbacks.");
+      setReportContent(cloneContent(REPORT_CONTENT));
     } finally {
       setLoading(false);
     }
   };
 
+  const currentContent =
+    reportContent[selectedCategory]?.[selectedHealthLevel] ||
+    REPORT_CONTENT[selectedCategory]?.[selectedHealthLevel] ||
+    { label: HEALTH_LEVELS[selectedHealthLevel], message: "", resources: [] };
+
+  const fallbackContent = REPORT_CONTENT[selectedCategory]?.[selectedHealthLevel];
+
+  const updateCurrent = (patch) => {
+    setReportContent((prev) => {
+      const next = cloneContent(prev);
+      if (!next[selectedCategory]) next[selectedCategory] = {};
+      next[selectedCategory][selectedHealthLevel] = {
+        ...(next[selectedCategory][selectedHealthLevel] || currentContent),
+        ...patch,
+      };
+      return next;
+    });
+  };
+
+  const updateResource = (index, field, value) => {
+    const resources = [...(currentContent.resources || [])];
+    resources[index] = { ...resources[index], [field]: value };
+    updateCurrent({ resources });
+  };
+
   const saveReportContent = async () => {
     try {
       setSaving(true);
-      const contentDocRef = doc(db, 'reportContent', 'main');
-      await setDoc(contentDocRef, reportContent);
-      alert('Content saved successfully!');
+      await setDoc(doc(db, "reportContent", "main"), reportContent);
+      toast("Report narrative and resources saved to reportContent/main.");
     } catch (error) {
-      console.error('Error saving report content:', error);
-      alert('Error saving content. Please try again.');
+      console.error("Error saving report content:", error);
+      toast("Error saving content. Please try again.");
     } finally {
       setSaving(false);
     }
   };
 
-  const handleAddResource = () => {
-    const newResource = {
-      title: '',
-      description: '',
-      type: 'download'
-    };
-    
-    const category = reportContent[selectedCategory];
-    if (category && category[selectedHealthLevel]) {
-      const updatedContent = { ...reportContent };
-      if (!updatedContent[selectedCategory][selectedHealthLevel].resources) {
-        updatedContent[selectedCategory][selectedHealthLevel].resources = [];
-      }
-      updatedContent[selectedCategory][selectedHealthLevel].resources.push(newResource);
-      setReportContent(updatedContent);
-      setEditingResource({
-        category: selectedCategory,
-        healthLevel: selectedHealthLevel,
-        index: updatedContent[selectedCategory][selectedHealthLevel].resources.length - 1
-      });
-    }
-  };
-
-  const handleEditResource = (category, healthLevel, index) => {
-    setEditingResource({ category, healthLevel, index });
-  };
-
-  const handleDeleteResource = (category, healthLevel, index) => {
-    if (confirm('Are you sure you want to delete this resource?')) {
-      const updatedContent = { ...reportContent };
-      updatedContent[category][healthLevel].resources.splice(index, 1);
-      setReportContent(updatedContent);
-    }
-  };
-
-  const handleSaveResource = () => {
-    if (!editingResource) return;
-    
-    const { category, healthLevel, index } = editingResource;
-    const updatedContent = { ...reportContent };
-    const resource = updatedContent[category][healthLevel].resources[index];
-    
-    // Update resource (assuming form fields are managed separately)
-    // For now, just close the editor
-    setEditingResource(null);
-  };
-
-  const handleUpdateMessage = () => {
-    const updatedContent = { ...reportContent };
-    if (updatedContent[selectedCategory] && updatedContent[selectedCategory][selectedHealthLevel]) {
-      updatedContent[selectedCategory][selectedHealthLevel].message = editingMessage;
-      setReportContent(updatedContent);
-    }
-  };
-
-  const currentContent = reportContent[selectedCategory]?.[selectedHealthLevel];
+  const pillClass =
+    selectedHealthLevel === "healthy" ? "healthy" : selectedHealthLevel === "unhealthy" ? "attention" : "tweak";
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mb-4"></div>
-          <p className="text-gray-400">Loading content...</p>
-        </div>
+      <div className="page">
+        <p>Loading content...</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Tabs */}
-      <div className="bg-white rounded-xl shadow-lg p-6">
-        <div className="flex space-x-4 border-b border-gray-200">
-          <button
-            onClick={() => setActiveTab('resources')}
-            className={`px-4 py-2 font-medium border-b-2 transition-colors ${
-              activeTab === 'resources'
-                ? 'border-emerald-500 text-emerald-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Resource Library
+    <div className="page">
+      <div className="page-head">
+        <div>
+          <h1>Report Content & Resources</h1>
+          <p>Edit the narrative messages and resource lists used in client reports for each category and health level.</p>
+        </div>
+        <div className="actions">
+          <button type="button" className="btn btn-secondary" onClick={() => setShowFallback((open) => !open)}>
+            {showFallback ? "Hide Fallback" : "View Fallback"}
           </button>
-          <button
-            onClick={() => setActiveTab('messages')}
-            className={`px-4 py-2 font-medium border-b-2 transition-colors ${
-              activeTab === 'messages'
-                ? 'border-emerald-500 text-emerald-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Report Messages
-          </button>
-          <button
-            onClick={() => setActiveTab('categories')}
-            className={`px-4 py-2 font-medium border-b-2 transition-colors ${
-              activeTab === 'categories'
-                ? 'border-emerald-500 text-emerald-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Category Descriptions
+          <button type="button" className="btn btn-primary" onClick={saveReportContent} disabled={saving}>
+            {saving ? "Saving..." : "Save to Firestore"}
           </button>
         </div>
       </div>
 
-      {/* Resource Library Management */}
-      {activeTab === 'resources' && (
-        <div className="bg-white rounded-xl shadow-lg p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold text-gray-900">Resource Library</h2>
-            <button
-              onClick={saveReportContent}
-              disabled={saving}
-              className="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50"
-            >
-              {saving ? 'Saving...' : 'Save All Changes'}
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            {/* Category & Health Level Selectors */}
-            <div className="lg:col-span-1 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                <select
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                >
-                  {Object.entries(CATEGORIES).map(([key, label]) => (
-                    <option key={key} value={key}>{label}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Health Level</label>
-                <select
-                  value={selectedHealthLevel}
-                  onChange={(e) => setSelectedHealthLevel(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                >
-                  {Object.entries(HEALTH_LEVELS).map(([key, label]) => (
-                    <option key={key} value={key}>{label}</option>
-                  ))}
-                </select>
-              </div>
-              <button
-                onClick={handleAddResource}
-                className="w-full px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors"
-              >
-                Add Resource
-              </button>
-            </div>
-
-            {/* Resources List */}
-            <div className="lg:col-span-3">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Resources for {CATEGORIES[selectedCategory]} - {HEALTH_LEVELS[selectedHealthLevel]}
-              </h3>
-              {currentContent && currentContent.resources && currentContent.resources.length > 0 ? (
-                <div className="space-y-4">
-                  {currentContent.resources.map((resource, index) => (
-                    <div key={index} className="p-4 border border-gray-200 rounded-lg">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <h4 className="font-medium text-gray-900">{resource.title}</h4>
-                          <p className="text-sm text-gray-600 mt-1">{resource.description}</p>
-                          <span className="inline-block mt-2 px-2 py-1 text-xs bg-emerald-100 text-emerald-800 rounded">
-                            {resource.type}
-                          </span>
-                        </div>
-                        <div className="flex space-x-2 ml-4">
-                          <button
-                            onClick={() => handleEditResource(selectedCategory, selectedHealthLevel, index)}
-                            className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDeleteResource(selectedCategory, selectedHealthLevel, index)}
-                            className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-500">No resources for this category and health level.</p>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Report Messages */}
-      {activeTab === 'messages' && (
-        <div className="bg-white rounded-xl shadow-lg p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold text-gray-900">Report Messages</h2>
-            <button
-              onClick={saveReportContent}
-              disabled={saving}
-              className="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50"
-            >
-              {saving ? 'Saving...' : 'Save All Changes'}
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid-main">
+        <aside className="panel">
+          <div className="panel-head">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
-              <select
-                value={selectedCategory}
-                onChange={(e) => {
-                  setSelectedCategory(e.target.value);
-                  setEditingMessage(reportContent[e.target.value]?.[selectedHealthLevel]?.message || '');
-                }}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
-              >
+              <h2>Content Matrix</h2>
+              <p>Select a category and health state.</p>
+            </div>
+          </div>
+          <div className="panel-body">
+            <div className="form-group">
+              <label>Category</label>
+              <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
                 {Object.entries(CATEGORIES).map(([key, label]) => (
-                  <option key={key} value={key}>{label}</option>
+                  <option key={key} value={key}>
+                    {label}
+                  </option>
                 ))}
               </select>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Health Level</label>
-              <select
-                value={selectedHealthLevel}
-                onChange={(e) => {
-                  setSelectedHealthLevel(e.target.value);
-                  setEditingMessage(reportContent[selectedCategory]?.[e.target.value]?.message || '');
-                }}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
-              >
+            <div className="form-group">
+              <label>Health level</label>
+              <select value={selectedHealthLevel} onChange={(e) => setSelectedHealthLevel(e.target.value)}>
                 {Object.entries(HEALTH_LEVELS).map(([key, label]) => (
-                  <option key={key} value={key}>{label}</option>
+                  <option key={key} value={key}>
+                    {label}
+                  </option>
                 ))}
               </select>
             </div>
-            <div className="lg:col-span-3">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Message</label>
-              <textarea
-                value={editingMessage || currentContent?.message || ''}
-                onChange={(e) => setEditingMessage(e.target.value)}
-                rows={8}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                placeholder="Enter report message..."
+            <div className="callout">
+              <strong>Firestore target</strong>
+              <br />
+              reportContent/main → {selectedCategory} → {selectedHealthLevel}
+            </div>
+          </div>
+        </aside>
+
+        <section className="panel">
+          <div className="panel-head">
+            <div>
+              <h2>Client Report Content</h2>
+              <p>What the client sees for this category and health state.</p>
+            </div>
+            <span className={`pill ${pillClass}`}>{HEALTH_LEVELS[selectedHealthLevel]}</span>
+          </div>
+          <div className="panel-body">
+            <div className="form-group">
+              <label>Label</label>
+              <input
+                value={currentContent.label || HEALTH_LEVELS[selectedHealthLevel]}
+                onChange={(e) => updateCurrent({ label: e.target.value })}
               />
+            </div>
+            <div className="form-group">
+              <label>Narrative message</label>
+              <textarea
+                value={currentContent.message || ""}
+                onChange={(e) => updateCurrent({ message: e.target.value })}
+              />
+            </div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", margin: "18px 0 9px" }}>
+              <strong>Resources</strong>
               <button
-                onClick={handleUpdateMessage}
-                className="mt-4 px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors"
+                type="button"
+                className="btn btn-secondary"
+                onClick={() =>
+                  updateCurrent({
+                    resources: [...(currentContent.resources || []), { title: "", description: "", type: "", url: "", image: "" }],
+                  })
+                }
               >
-                Update Message
+                + Add Resource
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Category Descriptions */}
-      {activeTab === 'categories' && (
-        <div className="bg-white rounded-xl shadow-lg p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold text-gray-900">Category Descriptions</h2>
-            <button
-              onClick={saveReportContent}
-              disabled={saving}
-              className="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50"
-            >
-              {saving ? 'Saving...' : 'Save All Changes'}
-            </button>
-          </div>
-
-          <div className="space-y-4">
-            {Object.entries(CATEGORIES).map(([key, label]) => (
-              <div key={key} className="p-4 border border-gray-200 rounded-lg">
-                <h3 className="font-medium text-gray-900 mb-2">{label}</h3>
-                <p className="text-sm text-gray-600">
-                  Category key: <code className="bg-gray-100 px-2 py-1 rounded">{key}</code>
-                </p>
-                <p className="text-sm text-gray-500 mt-2">
-                  Edit category metadata and descriptions here. (Full implementation would include form fields)
-                </p>
+            <div className="list">
+              {(currentContent.resources || []).map((resource, index) => (
+                <div className="resource-edit callout" key={`${selectedCategory}-${selectedHealthLevel}-${index}`}>
+                  <div className="grid-2">
+                    <div className="form-group">
+                      <label>Title</label>
+                      <input value={resource.title || ""} onChange={(e) => updateResource(index, "title", e.target.value)} />
+                    </div>
+                    <div className="form-group">
+                      <label>Type</label>
+                      <input value={resource.type || ""} onChange={(e) => updateResource(index, "type", e.target.value)} />
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label>Description</label>
+                    <input
+                      value={resource.description || ""}
+                      onChange={(e) => updateResource(index, "description", e.target.value)}
+                    />
+                  </div>
+                  <div className="grid-2">
+                    <div className="form-group">
+                      <label>URL</label>
+                      <input value={resource.url || ""} onChange={(e) => updateResource(index, "url", e.target.value)} />
+                    </div>
+                    <div className="form-group">
+                      <label>Cover image URL (optional)</label>
+                      <input value={resource.image || ""} onChange={(e) => updateResource(index, "image", e.target.value)} />
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-danger"
+                    onClick={() =>
+                      updateCurrent({
+                        resources: (currentContent.resources || []).filter((_, resourceIndex) => resourceIndex !== index),
+                      })
+                    }
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+            {showFallback && fallbackContent ? (
+              <div className="callout warning" style={{ marginTop: 16 }}>
+                <strong>Code fallback for this cell</strong>
+                <br />
+                {fallbackContent.message}
               </div>
-            ))}
+            ) : null}
           </div>
-        </div>
-      )}
+        </section>
+      </div>
     </div>
   );
 }

@@ -1,25 +1,26 @@
-import { useState, useEffect } from "react";
-import { collection, doc, getDocs, query, orderBy, updateDoc, getDoc } from "firebase/firestore";
+import { useEffect, useState } from "react";
+import { collection, doc, getDoc, getDocs, orderBy, query, updateDoc } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
-import AssessmentUser from "../../AssessmentUser";
+import { mintQuestionId } from "../../utils/adminUi";
+import { toast } from "../Toast";
 
 export default function AssessmentManagement() {
   const [sections, setSections] = useState([]);
   const [selectedSection, setSelectedSection] = useState(null);
   const [editingSection, setEditingSection] = useState(null);
-  const [previewMode, setPreviewMode] = useState(false);
+  const [originalSection, setOriginalSection] = useState(null);
   const [questionAnalytics, setQuestionAnalytics] = useState({});
   const [loadingAnalytics, setLoadingAnalytics] = useState(false);
-  const [mobileSideContentOpen, setMobileSideContentOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     fetchSections();
   }, []);
 
   useEffect(() => {
-    if (selectedSection) {
-      fetchQuestionAnalytics(selectedSection.id);
-    }
+    if (selectedSection) fetchQuestionAnalytics(selectedSection.id);
   }, [selectedSection]);
 
   async function fetchSections() {
@@ -32,94 +33,59 @@ export default function AssessmentManagement() {
       }));
       setSections(sectionsData);
       if (sectionsData.length > 0 && !selectedSection) {
-        setSelectedSection(sectionsData[0]);
-        const sectionWithExtras = {
-          beginningText: "",
-          endingText: "",
-          ...sectionsData[0],
-        };
-        setEditingSection(JSON.parse(JSON.stringify(sectionWithExtras)));
+        loadSection(sectionsData[0]);
       }
     } catch (error) {
       console.error("Error fetching sections: ", error);
+      toast("Could not load BHC_Assessment.");
     }
   }
+
+  const loadSection = (section) => {
+    const sectionWithExtras = {
+      beginningText: "",
+      endingText: "",
+      ...section,
+    };
+    const snapshot = JSON.parse(JSON.stringify(sectionWithExtras));
+    setSelectedSection(section);
+    setEditingSection(snapshot);
+    setOriginalSection(JSON.parse(JSON.stringify(sectionWithExtras)));
+  };
 
   async function fetchQuestionAnalytics(sectionId) {
     try {
       setLoadingAnalytics(true);
-      // Fetch all section results for this section
-      const sectionResultsQuery = query(
-        collection(db, "sectionResults")
-      );
-      const sectionResultsSnapshot = await getDocs(sectionResultsQuery);
-      
-      // Get the section to match by title
+      const sectionResultsSnapshot = await getDocs(collection(db, "sectionResults"));
       const sectionDoc = await getDoc(doc(db, "BHC_Assessment", sectionId));
       if (!sectionDoc.exists()) return;
-      
       const sectionData = sectionDoc.data();
-      const sectionTitle = sectionData.title;
-      
-      // Filter results for this section
       const relevantResults = sectionResultsSnapshot.docs
-        .map(doc => doc.data())
-        .filter(result => result.sectionName === sectionTitle);
-      
-      // Calculate analytics for each question
+        .map((docSnap) => docSnap.data())
+        .filter((result) => result.sectionName === sectionData.title);
+
       const analytics = {};
-      
-      if (sectionData.questions) {
-        sectionData.questions.forEach((question, qIndex) => {
-          const questionId = question.id;
-          let totalAnswers = 0;
-          let totalWeight = 0;
-          const answerCounts = {};
-          
-          relevantResults.forEach(result => {
-            if (result.answers && result.answers[questionId]) {
-              totalAnswers++;
-              const answerData = result.answers[questionId];
-              
-              if (question.type === 'multipleChoice') {
-                const answer = answerData.answer;
-                answerCounts[answer] = (answerCounts[answer] || 0) + 1;
-                totalWeight += answerData.weight || 0;
-              } else if (question.type === 'multipleSelect' && Array.isArray(answerData)) {
-                answerData.forEach(item => {
-                  const answer = item.answer;
-                  answerCounts[answer] = (answerCounts[answer] || 0) + 1;
-                  totalWeight += item.weight || 0;
-                });
-              }
-            }
-          });
-          
-          const completionRate = relevantResults.length > 0 
-            ? Math.round((totalAnswers / relevantResults.length) * 100)
-            : 0;
-          const averageWeight = totalAnswers > 0 ? totalWeight / totalAnswers : 0;
-          
-          // Find most common answer
-          let mostCommonAnswer = null;
-          let maxCount = 0;
-          Object.entries(answerCounts).forEach(([answer, count]) => {
-            if (count > maxCount) {
-              maxCount = count;
-              mostCommonAnswer = answer;
-            }
-          });
-          
-          analytics[questionId] = {
-            completionRate,
-            averageWeight: Math.round(averageWeight * 10) / 10,
-            totalAnswers,
-            mostCommonAnswer,
-            answerDistribution: answerCounts
-          };
+      (sectionData.questions || []).forEach((question) => {
+        let totalAnswers = 0;
+        let totalWeight = 0;
+        relevantResults.forEach((result) => {
+          if (!result.answers?.[question.id]) return;
+          totalAnswers += 1;
+          const answerData = result.answers[question.id];
+          if (question.type === "multipleChoice") {
+            totalWeight += answerData.weight || 0;
+          } else if (question.type === "multipleSelect" && Array.isArray(answerData)) {
+            answerData.forEach((item) => {
+              totalWeight += item.weight || 0;
+            });
+          }
         });
-      }
-      
+        analytics[question.id] = {
+          completionRate: relevantResults.length ? Math.round((totalAnswers / relevantResults.length) * 100) : 0,
+          averageWeight: totalAnswers ? Math.round((totalWeight / totalAnswers) * 10) / 10 : 0,
+          totalAnswers,
+        };
+      });
       setQuestionAnalytics(analytics);
     } catch (error) {
       console.error("Error fetching question analytics:", error);
@@ -128,433 +94,223 @@ export default function AssessmentManagement() {
     }
   }
 
-  const updateQuestionIds = (questions) => {
-    const sectionOrder = editingSection.order || 0;
-    return questions.map((question, i) => ({
-      ...question,
-      id: `q${sectionOrder}${String.fromCharCode(97 + i)}`,
-    }));
-  };
-
-  const handleSectionClick = (section) => {
-    setSelectedSection(section);
-    const sectionWithExtras = {
-      beginningText: "",
-      endingText: "",
-      ...section,
-    };
-    setEditingSection(JSON.parse(JSON.stringify(sectionWithExtras)));
-    setMobileSideContentOpen(false);
-  };
-
-  const handleSectionTitleChange = (newTitle) => {
-    setEditingSection((prev) => ({ ...prev, title: newTitle }));
-  };
-
-  const handleBeginningTextChange = (newText) => {
-    setEditingSection((prev) => ({ ...prev, beginningText: newText }));
-  };
-
-  const handleEndingTextChange = (newText) => {
-    setEditingSection((prev) => ({ ...prev, endingText: newText }));
-  };
-
-  const handleQuestionTextChange = (questionIndex, newText) => {
-    setEditingSection((prev) => {
-      const updatedQuestions = [...prev.questions];
-      updatedQuestions[questionIndex].text = newText;
-      return { ...prev, questions: updatedQuestions };
-    });
-  };
-
-  const handleQuestionTypeChange = (questionIndex, newType) => {
-    setEditingSection((prev) => {
-      const updatedQuestions = [...prev.questions];
-      updatedQuestions[questionIndex].type = newType;
-      if (newType !== "multipleChoice" && newType !== "multipleSelect") {
-        updatedQuestions[questionIndex].options = [];
-      }
-      return { ...prev, questions: updatedQuestions };
-    });
-  };
-
-  const handleOptionChange = (questionIndex, optionIndex, field, newValue) => {
-    setEditingSection((prev) => {
-      const updatedQuestions = [...prev.questions];
-      const updatedOptions = [...updatedQuestions[questionIndex].options];
-      updatedOptions[optionIndex][field] = newValue;
-      updatedQuestions[questionIndex].options = updatedOptions;
-      return { ...prev, questions: updatedQuestions };
-    });
-  };
-
-  const handleAddOption = (questionIndex) => {
-    setEditingSection((prev) => {
-      const updatedQuestions = [...prev.questions];
-      if (!updatedQuestions[questionIndex].options) {
-        updatedQuestions[questionIndex].options = [];
-      }
-      updatedQuestions[questionIndex].options.push({ label: "", weight: 0 });
-      return { ...prev, questions: updatedQuestions };
-    });
-  };
-
-  const handleDeleteOption = (questionIndex, optionIndex) => {
-    setEditingSection((prev) => {
-      const updatedQuestions = [...prev.questions];
-      updatedQuestions[questionIndex].options = updatedQuestions[questionIndex].options.filter(
-        (_, idx) => idx !== optionIndex
-      );
-      return { ...prev, questions: updatedQuestions };
-    });
+  const updateEditing = (updater) => {
+    setEditingSection((prev) => updater(prev));
   };
 
   const handleAddNewQuestion = () => {
-    setEditingSection((prev) => {
-      const newIndex = prev.questions ? prev.questions.length : 0;
-      const sectionOrder = prev.order || 0;
-      const newLetter = String.fromCharCode(97 + newIndex);
-      const newId = `q${sectionOrder}${newLetter}`;
-      const newQuestion = {
-        id: newId,
+    updateEditing((prev) => {
+      const questions = [...(prev.questions || [])];
+      questions.push({
+        id: mintQuestionId(prev.order || 0, questions),
         text: "",
         type: "multipleChoice",
         options: [],
-      };
-      const updatedQuestions = [...(prev.questions || []), newQuestion];
-      return { ...prev, questions: updateQuestionIds(updatedQuestions) };
+      });
+      return { ...prev, questions };
     });
   };
 
   const handleDeleteQuestion = (questionIndex) => {
-    setEditingSection((prev) => {
-      const updatedQuestions = prev.questions.filter((_, index) => index !== questionIndex);
-      return { ...prev, questions: updateQuestionIds(updatedQuestions) };
+    updateEditing((prev) => ({
+      ...prev,
+      questions: prev.questions.filter((_, index) => index !== questionIndex),
+    }));
+  };
+
+  const moveQuestion = (from, to) => {
+    updateEditing((prev) => {
+      if (to < 0 || to >= prev.questions.length) return prev;
+      const questions = [...prev.questions];
+      const [moved] = questions.splice(from, 1);
+      questions.splice(to, 0, moved);
+      return { ...prev, questions };
     });
   };
 
-  const handleMoveQuestionUp = (qIndex) => {
-    if (qIndex <= 0) return;
-    setEditingSection((prev) => {
-      const updatedQuestions = [...prev.questions];
-      const temp = updatedQuestions[qIndex - 1];
-      updatedQuestions[qIndex - 1] = updatedQuestions[qIndex];
-      updatedQuestions[qIndex] = temp;
-      return { ...prev, questions: updateQuestionIds(updatedQuestions) };
-    });
-  };
-
-  const handleMoveQuestionDown = (qIndex) => {
-    if (qIndex >= editingSection.questions.length - 1) return;
-    setEditingSection((prev) => {
-      const updatedQuestions = [...prev.questions];
-      const temp = updatedQuestions[qIndex + 1];
-      updatedQuestions[qIndex + 1] = updatedQuestions[qIndex];
-      updatedQuestions[qIndex] = temp;
-      return { ...prev, questions: updateQuestionIds(updatedQuestions) };
-    });
-  };
-
-  const handleSaveSection = async () => {
-    if (!editingSection || !editingSection.id) return;
+  const persistSection = async () => {
+    if (!editingSection?.id) return;
     try {
-      const docRef = doc(db, "BHC_Assessment", editingSection.id);
-      await updateDoc(docRef, {
+      setSaving(true);
+      await updateDoc(doc(db, "BHC_Assessment", editingSection.id), {
         title: editingSection.title,
         order: editingSection.order || 0,
         beginningText: editingSection.beginningText || "",
         endingText: editingSection.endingText || "",
         questions: editingSection.questions,
       });
-      setSections((prevSections) =>
-        prevSections.map((sec) =>
-          sec.id === editingSection.id ? editingSection : sec
-        )
-      );
+      setSections((prev) => prev.map((section) => (section.id === editingSection.id ? editingSection : section)));
       setSelectedSection(editingSection);
-      alert("Section saved successfully!");
+      setOriginalSection(JSON.parse(JSON.stringify(editingSection)));
+      setConfirmOpen(false);
+      setConfirmText("");
+      toast("Section saved to BHC_Assessment.");
     } catch (error) {
       console.error("Error saving section:", error);
-      alert("Error saving section. Check console for details.");
+      toast("Error saving section. Check console for details.");
+    } finally {
+      setSaving(false);
     }
   };
 
-  if (previewMode) {
-    return (
-      <div className="bg-white rounded-xl shadow-lg p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold text-gray-900">Preview Mode</h2>
-          <button
-            onClick={() => setPreviewMode(false)}
-            className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
-          >
-            Exit Preview
-          </button>
-        </div>
-        <AssessmentUser />
-      </div>
-    );
-  }
-
   return (
-    <div className="bg-white rounded-xl shadow-lg">
-      {/* Header */}
-      <div className="p-6 border-b border-gray-200">
-        <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-bold text-gray-900">Assessment Management</h2>
-          <button
-            onClick={() => setPreviewMode(true)}
-            className="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors"
-          >
-            Preview Assessment
-          </button>
+    <div className="page">
+      <div className="page-head">
+        <div>
+          <h1>Assessment Management</h1>
+          <p>Edit BHC_Assessment section content and questions while preserving IDs, weights, scoring behavior, and stable section titles.</p>
+        </div>
+        <div className="actions">
+          <button type="button" className="btn btn-secondary" onClick={fetchSections}>Reload</button>
+          <button type="button" className="btn btn-primary" onClick={() => { setConfirmText(""); setConfirmOpen(true); }}>Save Section</button>
         </div>
       </div>
-
-      <div className="flex flex-col lg:flex-row">
-        {/* Sidebar */}
-        <aside className={`w-full lg:w-80 bg-gray-50 border-r border-gray-200 p-6 ${
-          mobileSideContentOpen ? "block" : "hidden lg:block"
-        }`}>
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Assessment Sections</h3>
-          <div className="space-y-2">
-            {sections.length > 0 ? (
-              sections.map((section) => {
-                const isActive = selectedSection?.id === section.id;
-                return (
-                  <div
-                    key={section.id}
-                    onClick={() => handleSectionClick(section)}
-                    className={`p-3 rounded-lg cursor-pointer transition-all ${
-                      isActive
-                        ? "bg-emerald-500 text-white"
-                        : "bg-white border border-gray-200 hover:bg-gray-100"
-                    }`}
-                  >
-                    <div className="font-medium">{section.title}</div>
-                    <div className={`text-xs mt-1 ${isActive ? "text-emerald-50" : "text-gray-500"}`}>
-                      {section.questions?.length || 0} questions
-                    </div>
+      <div className="callout warning" style={{ marginBottom: 17 }}>
+        <strong>High-impact editor.</strong> Changing option weights changes future scores. Changing question IDs can orphan existing sectionResults.answers. Renaming section titles can break completion matching. Preserve IDs and stable titles unless you are intentionally migrating existing data.
+      </div>
+      <div className="grid-main">
+        <aside className="panel">
+          <div className="panel-head"><div><h2>Sections</h2><p>Loaded from BHC_Assessment ordered by order.</p></div></div>
+          <div className="panel-body">
+            <select
+              value={selectedSection?.id || ""}
+              onChange={(e) => {
+                const next = sections.find((section) => section.id === e.target.value);
+                if (next) loadSection(next);
+              }}
+            >
+              {sections.map((section) => (
+                <option key={section.id} value={section.id}>{section.order}. {section.title}</option>
+              ))}
+            </select>
+            <div className="list" style={{ marginTop: 13 }}>
+              {sections.filter((section) => [2, 16, 19].includes(section.order)).map((section) => (
+                <button type="button" className="list-item" key={section.id} onClick={() => loadSection(section)}>
+                  <div>
+                    <strong>Section {section.order}</strong>
+                    <span>{section.questions?.length || 0} questions</span>
                   </div>
-                );
-              })
-            ) : (
-              <p className="text-gray-500 text-sm">Loading sections...</p>
-            )}
+                  <span className={`pill ${section.order === 19 ? "attention" : section.order === 16 ? "tweak" : "info"}`}>{section.title}</span>
+                </button>
+              ))}
+            </div>
           </div>
         </aside>
-
-        {/* Main Content */}
-        <main className="flex-1 p-6">
-          {selectedSection && editingSection ? (
-            <div className="space-y-6">
-              {/* Section Header */}
-              <div className="flex justify-between items-center">
-                <input
-                  type="text"
-                  value={editingSection.title || ""}
-                  onChange={(e) => handleSectionTitleChange(e.target.value)}
-                  className="text-2xl font-bold text-gray-900 border-b border-gray-200 focus:border-emerald-500 outline-none w-full max-w-md"
-                />
-                <button
-                  onClick={handleSaveSection}
-                  className="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors"
-                >
-                  Save Section
-                </button>
-              </div>
-
-              {/* Beginning/Ending Text */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-gray-600 font-medium mb-2">Beginning Text</label>
-                  <input
-                    type="text"
-                    value={editingSection.beginningText || ""}
-                    onChange={(e) => handleBeginningTextChange(e.target.value)}
-                    className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-400 text-gray-900 bg-white"
-                  />
+        <section className="panel">
+          <div className="panel-head">
+            <div>
+              <h2>{editingSection ? `Section ${editingSection.order}: ${editingSection.title}` : "Select a section"}</h2>
+              <p>Document fields: title, order, beginningText, endingText, questions[].</p>
+            </div>
+          </div>
+          {editingSection ? (
+            <div className="panel-body">
+              <div className="grid-2">
+                <div className="form-group">
+                  <label>Title</label>
+                  <input value={editingSection.title || ""} onChange={(e) => updateEditing((prev) => ({ ...prev, title: e.target.value }))} />
                 </div>
-                <div>
-                  <label className="block text-gray-600 font-medium mb-2">Ending Text</label>
-                  <input
-                    type="text"
-                    value={editingSection.endingText || ""}
-                    onChange={(e) => handleEndingTextChange(e.target.value)}
-                    className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-400 text-gray-900 bg-white"
-                  />
+                <div className="form-group">
+                  <label>Order</label>
+                  <input type="number" value={editingSection.order || 0} onChange={(e) => updateEditing((prev) => ({ ...prev, order: Number(e.target.value) }))} />
                 </div>
               </div>
-
-              {/* Questions */}
-              {editingSection.questions && editingSection.questions.length > 0 ? (
-                <div className="space-y-6">
-                  {editingSection.questions.map((question, qIndex) => {
-                    const analytics = questionAnalytics[question.id];
-                    return (
-                      <div key={question.id || qIndex} className="p-6 bg-gray-50 rounded-lg border border-gray-200">
-                        <div className="flex justify-between items-start mb-3">
-                          <div className="flex-1">
-                            <p className="font-semibold text-gray-900 mb-2">
-                              Question {qIndex + 1} (ID: {question.id})
-                            </p>
-                            {analytics && (
-                              <div className="mb-3 p-3 bg-blue-50 rounded-lg text-sm">
-                                <div className="grid grid-cols-3 gap-4">
-                                  <div>
-                                    <span className="text-gray-600">Completion Rate: </span>
-                                    <span className="font-medium">{analytics.completionRate}%</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-gray-600">Avg Weight: </span>
-                                    <span className="font-medium">{analytics.averageWeight}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-gray-600">Total Answers: </span>
-                                    <span className="font-medium">{analytics.totalAnswers}</span>
-                                  </div>
-                                </div>
-                                {analytics.mostCommonAnswer && (
-                                  <div className="mt-2">
-                                    <span className="text-gray-600">Most Common Answer: </span>
-                                    <span className="font-medium">{analytics.mostCommonAnswer}</span>
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                            {loadingAnalytics && !analytics && (
-                              <div className="mb-3 text-sm text-gray-500">Loading analytics...</div>
-                            )}
-                          </div>
-                          <div className="flex space-x-2">
-                            <button
-                              type="button"
-                              onClick={() => handleMoveQuestionUp(qIndex)}
-                              className="text-gray-600 hover:text-gray-900"
-                              title="Move Up"
-                            >
-                              ↑
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleMoveQuestionDown(qIndex)}
-                              className="text-gray-600 hover:text-gray-900"
-                              title="Move Down"
-                            >
-                              ↓
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteQuestion(qIndex)}
-                              className="text-red-600 hover:text-red-900"
-                              title="Delete Question"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        </div>
-
-                        <input
-                          type="text"
-                          value={question.text}
-                          onChange={(e) => handleQuestionTextChange(qIndex, e.target.value)}
-                          className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-400 mb-3 text-gray-900 bg-white"
-                          placeholder="Enter question text"
-                        />
-
-                        <select
-                          value={question.type}
-                          onChange={(e) => handleQuestionTypeChange(qIndex, e.target.value)}
-                          className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-400 mb-3 text-gray-900 bg-white"
-                        >
-                          <option value="multipleChoice">Multiple Choice</option>
-                          <option value="multipleSelect">Multiple Select</option>
-                          <option value="text">Text</option>
-                          <option value="other">Other</option>
-                        </select>
-
-                        {(question.type === "multipleChoice" || question.type === "multipleSelect") && (
-                          <div className="space-y-3">
-                            {Array.isArray(question.options) && question.options.length > 0 && (
-                              <div>
-                                {question.options.map((option, oIndex) => (
-                                  <div
-                                    key={oIndex}
-                                    className="flex items-center space-x-3 mt-2 p-2 bg-white rounded-lg border border-gray-200"
-                                  >
-                                    <input
-                                      type="text"
-                                      value={option.label}
-                                      onChange={(e) =>
-                                        handleOptionChange(qIndex, oIndex, "label", e.target.value)
-                                      }
-                                      className="flex-1 p-2 border border-gray-200 rounded-lg text-gray-900 bg-white"
-                                      placeholder="Option label"
-                                    />
-                                    <input
-                                      type="number"
-                                      value={option.weight ?? ""}
-                                      onChange={(e) =>
-                                        handleOptionChange(qIndex, oIndex, "weight", e.target.value)
-                                      }
-                                      className="w-20 p-2 border border-gray-200 rounded-lg text-gray-900 bg-white"
-                                      placeholder="Weight"
-                                    />
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDeleteOption(qIndex, oIndex)}
-                                      className="text-red-600 hover:text-red-900"
-                                    >
-                                      ✕
-                                    </button>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => handleAddOption(qIndex)}
-                              className="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors"
-                            >
-                              Add Option
-                            </button>
-                          </div>
-                        )}
+              <div className="form-group">
+                <label>Beginning text</label>
+                <textarea value={editingSection.beginningText || ""} onChange={(e) => updateEditing((prev) => ({ ...prev, beginningText: e.target.value }))} />
+              </div>
+              {(editingSection.questions || []).map((question, qIndex) => {
+                const analytics = questionAnalytics[question.id];
+                return (
+                  <div className="question-editor callout" key={question.id || qIndex}>
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                      <div>
+                        <span className="pill info">{question.id}</span>
+                        <strong style={{ display: "block", marginTop: 7 }}>Question {qIndex + 1}</strong>
+                        {analytics ? <span>Completion {analytics.completionRate}% · Avg weight {analytics.averageWeight} · {analytics.totalAnswers} answers</span> : loadingAnalytics ? <span>Loading analytics...</span> : null}
                       </div>
-                    );
-                  })}
-                  <div className="flex justify-end gap-4">
-                    <button
-                      type="button"
-                      onClick={handleAddNewQuestion}
-                      className="px-6 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors"
-                    >
-                      Add New Question
-                    </button>
+                      <div className="actions">
+                        <button type="button" className="btn btn-ghost" onClick={() => moveQuestion(qIndex, qIndex - 1)}>↑</button>
+                        <button type="button" className="btn btn-ghost" onClick={() => moveQuestion(qIndex, qIndex + 1)}>↓</button>
+                        <button type="button" className="btn btn-danger" onClick={() => handleDeleteQuestion(qIndex)}>Delete</button>
+                      </div>
+                    </div>
+                    <div className="form-group" style={{ marginTop: 12 }}>
+                      <label>Question text</label>
+                      <input value={question.text || ""} onChange={(e) => updateEditing((prev) => { const questions = [...prev.questions]; questions[qIndex] = { ...questions[qIndex], text: e.target.value }; return { ...prev, questions }; })} />
+                    </div>
+                    <div className="form-group">
+                      <label>Type</label>
+                      <select
+                        value={question.type}
+                        onChange={(e) => updateEditing((prev) => {
+                          const questions = [...prev.questions];
+                          const nextType = e.target.value;
+                          questions[qIndex] = { ...questions[qIndex], type: nextType, options: nextType === "multipleChoice" || nextType === "multipleSelect" ? questions[qIndex].options || [] : [] };
+                          return { ...prev, questions };
+                        })}
+                      >
+                        <option value="multipleChoice">multipleChoice</option>
+                        <option value="multipleSelect">multipleSelect</option>
+                        <option value="text">text</option>
+                      </select>
+                    </div>
+                    {(question.type === "multipleChoice" || question.type === "multipleSelect") && (question.options || []).map((option, oIndex) => (
+                      <div className="grid-2" key={`${question.id}-opt-${oIndex}`}>
+                        <div className="form-group">
+                          <label>Option label</label>
+                          <input value={option.label || ""} onChange={(e) => updateEditing((prev) => { const questions = [...prev.questions]; const options = [...(questions[qIndex].options || [])]; options[oIndex] = { ...options[oIndex], label: e.target.value }; questions[qIndex] = { ...questions[qIndex], options }; return { ...prev, questions }; })} />
+                        </div>
+                        <div className="form-group">
+                          <label>Weight</label>
+                          <input type="number" value={option.weight ?? ""} onChange={(e) => updateEditing((prev) => { const questions = [...prev.questions]; const options = [...(questions[qIndex].options || [])]; options[oIndex] = { ...options[oIndex], weight: e.target.value }; questions[qIndex] = { ...questions[qIndex], options }; return { ...prev, questions }; })} />
+                        </div>
+                      </div>
+                    ))}
+                    {(question.type === "multipleChoice" || question.type === "multipleSelect") && (
+                      <button type="button" className="btn btn-secondary" onClick={() => updateEditing((prev) => { const questions = [...prev.questions]; const options = [...(questions[qIndex].options || []), { label: "", weight: 0 }]; questions[qIndex] = { ...questions[qIndex], options }; return { ...prev, questions }; })}>+ Add Option</button>
+                    )}
                   </div>
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  <p>No questions in this section.</p>
-                  <button
-                    type="button"
-                    onClick={handleAddNewQuestion}
-                    className="mt-4 px-6 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors"
-                  >
-                    Add New Question
-                  </button>
-                </div>
-              )}
+                );
+              })}
+              <button type="button" className="btn btn-secondary" style={{ marginTop: 12 }} onClick={handleAddNewQuestion}>+ Add Question</button>
+              <div className="form-group" style={{ marginTop: 16 }}>
+                <label>Ending text</label>
+                <textarea value={editingSection.endingText || ""} onChange={(e) => updateEditing((prev) => ({ ...prev, endingText: e.target.value }))} />
+              </div>
             </div>
           ) : (
-            <div className="flex items-center justify-center h-full text-gray-500">
-              <div className="text-center py-16">
-                <h3 className="text-xl font-semibold text-gray-900">Manage BHC Assessment</h3>
-                <p className="mt-2 text-gray-600">Select a section from the sidebar to edit its details.</p>
-              </div>
-            </div>
+            <div className="panel-body"><p>Select a section to edit its details.</p></div>
           )}
-        </main>
+        </section>
+      </div>
+      <div className={`modal-backdrop${confirmOpen ? " open" : ""}`} onClick={() => setConfirmOpen(false)}>
+        <div className="modal" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-head">
+            <h3>Confirm Assessment Change</h3>
+            <button type="button" className="btn btn-secondary" onClick={() => setConfirmOpen(false)}>Cancel</button>
+          </div>
+          <div className="modal-body">
+            <div className="dangerbox callout">
+              <strong>This can affect future scores and historical answer compatibility.</strong>
+              <br />
+              Saving overwrites the BHC_Assessment section document. Do not recycle question IDs. If you changed a title, question ID, or option weight, verify that the change is intentional.
+              {originalSection && originalSection.title !== editingSection?.title ? (
+                <>
+                  <br />
+                  Title change detected: existing sectionResults matching "{originalSection.title}" will no longer count as complete.
+                </>
+              ) : null}
+            </div>
+            <div className="form-group" style={{ marginTop: 14 }}>
+              <label>Type SAVE to confirm</label>
+              <input value={confirmText} onChange={(e) => setConfirmText(e.target.value)} placeholder="SAVE" />
+            </div>
+          </div>
+          <div className="modal-foot">
+            <button type="button" className="btn btn-primary" disabled={confirmText !== "SAVE" || saving} onClick={persistSection}>Save to Firestore</button>
+          </div>
+        </div>
       </div>
     </div>
   );

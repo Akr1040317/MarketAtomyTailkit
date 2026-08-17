@@ -53,13 +53,13 @@ const CATEGORY_LABELS = {
 };
 
 const TABS = [
-  { id: 'overview', label: 'Overview', icon: '📊' },
-  { id: 'sections', label: 'Section Stats', icon: '📝' },
-  { id: 'questions', label: 'Question Analysis', icon: '❓' },
-  { id: 'categories', label: 'Category Breakdown', icon: '📈' },
-  { id: 'time', label: 'Time Analytics', icon: '⏱️' },
-  { id: 'engagement', label: 'Engagement Metrics', icon: '👥' },
-  { id: 'insights', label: 'Predictive Insights', icon: '🔮' }
+  { id: 'overview', label: 'Overview' },
+  { id: 'sections', label: 'Section Stats' },
+  { id: 'questions', label: 'Question Analysis' },
+  { id: 'categories', label: 'Category Breakdown' },
+  { id: 'time', label: 'Time Analytics' },
+  { id: 'engagement', label: 'Engagement' },
+  { id: 'insights', label: 'Predictive Insights' }
 ];
 
 export default function AnalyticsDashboard() {
@@ -1553,115 +1553,76 @@ export default function AnalyticsDashboard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mb-4"></div>
-          <p className="text-gray-400">Loading analytics...</p>
-        </div>
+      <div className="page">
+        <p>Loading analytics...</p>
       </div>
     );
   }
 
   if (!analyticsData) {
     return (
-      <div className="text-center py-12">
-        <p className="text-gray-400">No analytics data available</p>
+      <div className="page">
+        <p>No analytics data available</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Filters */}
-      <div className="bg-white rounded-xl shadow-lg p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Date From</label>
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-gray-900 bg-white"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Date To</label>
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-gray-900 bg-white"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
-            <select
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-gray-900 bg-white"
-            >
-              <option value="all">All Roles</option>
-              <option value="admin">Admin</option>
-              <option value="tier1">Tier 1</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Completion Status</label>
-            <select
-              value={completionFilter}
-              onChange={(e) => setCompletionFilter(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-gray-900 bg-white"
-            >
-              <option value="all">All</option>
-              <option value="completed">Completed</option>
-              <option value="incomplete">Incomplete</option>
-            </select>
-          </div>
-          <div className="flex items-end">
-            <button
-              onClick={() => { setDateFrom(''); setDateTo(''); setRoleFilter('all'); setCompletionFilter('all'); }}
-              className="w-full px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 text-sm font-medium"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-              Clear Filters
-            </button>
-          </div>
+    <div className="page">
+      <div className="page-head">
+        <div>
+          <h1>Analytics & Reports</h1>
+          <p>Unified platform analytics for completion, scoring, engagement, question performance, drop-off, and risk signals.</p>
+        </div>
+        <div className="actions">
+          <button type="button" className="btn btn-secondary" onClick={handleExportCSV}>Export CSV</button>
+          <button type="button" className="btn btn-primary" onClick={handleGeneratePDF}>Export PDF</button>
         </div>
       </div>
-
-      {/* Tab Navigation */}
-      <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-        <div className="border-b border-gray-200">
-          <div className="flex overflow-x-auto">
+      <section className="panel" style={{ marginBottom: 17 }}>
+        <div className="panel-body">
+          <div className="tabs">
             {TABS.map((tab) => (
               <button
                 key={tab.id}
+                type="button"
+                className={`tab${activeTab === tab.id ? " active" : ""}`}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-6 py-4 text-sm font-medium transition-colors whitespace-nowrap border-b-2 ${
-                  activeTab === tab.id
-                    ? 'border-emerald-500 text-emerald-600 bg-emerald-50'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
               >
-                <span className="text-lg">{tab.icon}</span>
-                <span>{tab.label}</span>
+                {tab.label}
               </button>
             ))}
           </div>
+          <div className="filter-grid">
+            <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+            <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+            <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+              <option value="all">All categories</option>
+              {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
+            </select>
+            <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
+              <option value="all">All roles</option>
+              <option value="tier1">tier1</option>
+              <option value="admin">admin</option>
+            </select>
+            <select value={completionFilter} onChange={(e) => setCompletionFilter(e.target.value)}>
+              <option value="all">All completion</option>
+              <option value="completed">Complete</option>
+              <option value="incomplete">Incomplete</option>
+            </select>
+          </div>
         </div>
-
-        {/* Tab Content */}
-        <div className="p-6">
-          {activeTab === 'overview' && renderOverview()}
-          {activeTab === 'sections' && renderSectionStats()}
-          {activeTab === 'questions' && renderQuestionAnalysis()}
-          {activeTab === 'categories' && renderCategoryBreakdown()}
-          {activeTab === 'time' && renderTimeAnalytics()}
-          {activeTab === 'engagement' && renderEngagementMetrics()}
-          {activeTab === 'insights' && renderPredictiveInsights()}
-        </div>
+      </section>
+      <div>
+        {activeTab === 'overview' && renderOverview()}
+        {activeTab === 'sections' && renderSectionStats()}
+        {activeTab === 'questions' && renderQuestionAnalysis()}
+        {activeTab === 'categories' && renderCategoryBreakdown()}
+        {activeTab === 'time' && renderTimeAnalytics()}
+        {activeTab === 'engagement' && renderEngagementMetrics()}
+        {activeTab === 'insights' && renderPredictiveInsights()}
       </div>
     </div>
   );

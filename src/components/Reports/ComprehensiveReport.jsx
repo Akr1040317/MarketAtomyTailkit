@@ -4,6 +4,7 @@ import {
   generateActionItems,
   getRecommendedResources,
 } from '../../utils/reportContent';
+import { Reveal, Stagger, Item } from '../Reveal';
 
 /**
  * Comprehensive Report Component
@@ -29,7 +30,7 @@ export default function ComprehensiveReport({ enhancedScores }) {
   return (
     <div className="space-y-8">
       {/* Executive Summary */}
-      <section className="bg-white rounded-xl shadow-lg p-8">
+      <Reveal as="section" className="bg-white rounded-xl shadow-lg p-8">
         <h2 className="text-3xl font-bold text-gray-900 mb-4">
           Executive Summary
         </h2>
@@ -59,27 +60,30 @@ export default function ComprehensiveReport({ enhancedScores }) {
             </p>
           </div>
         </div>
-      </section>
+      </Reveal>
 
       {/* Category Breakdown */}
       <section>
-        <h2 className="text-3xl font-bold text-white mb-6">
-          Category-by-Category Breakdown
-        </h2>
-        <div className="grid md:grid-cols-2 gap-6">
+        <Reveal>
+          <h2 className="text-3xl font-bold text-white mb-6">
+            Category-by-Category Breakdown
+          </h2>
+        </Reveal>
+        <Stagger className="grid md:grid-cols-2 gap-6">
           {categoryKeys.map((key) => (
-            <CategoryReportCard
-              key={key}
-              categoryKey={key}
-              analytics={enhancedScores[key]}
-            />
+            <Item key={key}>
+              <CategoryReportCard
+                categoryKey={key}
+                analytics={enhancedScores[key]}
+              />
+            </Item>
           ))}
-        </div>
+        </Stagger>
       </section>
 
       {/* Priority Action Items */}
       {actionItems.length > 0 && (
-        <section className="bg-white rounded-xl shadow-lg p-8">
+        <Reveal as="section" className="bg-white rounded-xl shadow-lg p-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-4">
             Priority Action Items
           </h2>
@@ -87,9 +91,9 @@ export default function ComprehensiveReport({ enhancedScores }) {
             Based on your assessment, here are the areas that need immediate
             attention:
           </p>
-          <div className="space-y-4">
+          <Stagger className="space-y-4">
             {actionItems.map((item, index) => (
-              <div
+              <Item
                 key={index}
                 className="p-4 bg-red-50 border-l-4 border-red-500 rounded-lg"
               >
@@ -129,14 +133,14 @@ export default function ComprehensiveReport({ enhancedScores }) {
                     )}
                   </div>
                 </div>
-              </div>
+              </Item>
             ))}
-          </div>
-        </section>
+          </Stagger>
+        </Reveal>
       )}
 
       {/* Next Steps */}
-      <section className="bg-gradient-to-r from-emerald-500 to-teal-500 rounded-xl shadow-lg p-8 text-white">
+      <Reveal as="section" className="bg-gradient-to-r from-emerald-500 to-teal-500 rounded-xl shadow-lg p-8 text-white">
         <h2 className="text-3xl font-bold mb-4">Next Steps</h2>
         <p className="mb-6 text-emerald-50">
           Ready to take action? Schedule a consultation with one of our
@@ -146,7 +150,7 @@ export default function ComprehensiveReport({ enhancedScores }) {
         <button className="bg-white text-emerald-600 px-6 py-3 rounded-lg font-semibold hover:bg-emerald-50 transition-colors">
           Schedule Assessment Debrief
         </button>
-      </section>
+      </Reveal>
     </div>
   );
 }

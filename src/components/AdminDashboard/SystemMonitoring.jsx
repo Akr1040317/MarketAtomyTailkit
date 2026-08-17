@@ -1,397 +1,179 @@
-import { useState, useEffect } from 'react';
-import { collection, getDocs, query, orderBy, updateDoc, doc, where } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
-import { Dialog, Transition } from '@headlessui/react';
-import { Fragment } from 'react';
+import { useEffect, useState } from "react";
+import { collection, doc, getDocs, orderBy, query, updateDoc } from "firebase/firestore";
+import { db } from "../../firebaseConfig";
+import { formatDate, severityMeta, statusMeta } from "../../utils/adminUi";
+import { toast } from "../Toast";
 
 export default function SystemMonitoring() {
-  const [activeTab, setActiveTab] = useState('bugs');
+  const [activeTab, setActiveTab] = useState("bugs");
   const [bugReports, setBugReports] = useState([]);
   const [feedback, setFeedback] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [severityFilter, setSeverityFilter] = useState('all');
-  const [ratingFilter, setRatingFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [severityFilter, setSeverityFilter] = useState("all");
+  const [ratingFilter, setRatingFilter] = useState("all");
+  const [bugSearch, setBugSearch] = useState("");
+  const [feedbackSearch, setFeedbackSearch] = useState("");
   const [selectedBug, setSelectedBug] = useState(null);
   const [selectedFeedback, setSelectedFeedback] = useState(null);
-  const [bugModalOpen, setBugModalOpen] = useState(false);
-  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
 
+  const load = async () => {
+    try {
+      setLoading(true);
+      const [bugsSnap, feedbackSnap] = await Promise.all([
+        getDocs(query(collection(db, "bugReports"), orderBy("submittedAt", "desc"))),
+        getDocs(query(collection(db, "feedback"), orderBy("submittedAt", "desc"))),
+      ]);
+      setBugReports(bugsSnap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() })));
+      setFeedback(feedbackSnap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() })));
+    } catch (error) {
+      console.error("Error fetching monitoring data:", error);
+      toast("Could not load monitoring data.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    fetchBugReports();
-    fetchFeedback();
+    load();
   }, []);
-
-  useEffect(() => {
-    if (activeTab === 'bugs') {
-      fetchBugReports();
-    } else if (activeTab === 'feedback') {
-      fetchFeedback();
-    }
-  }, [statusFilter, severityFilter, ratingFilter]);
-
-  const fetchBugReports = async () => {
-    try {
-      setLoading(true);
-      let bugQuery = query(collection(db, 'bugReports'), orderBy('submittedAt', 'desc'));
-      
-      if (statusFilter !== 'all') {
-        bugQuery = query(collection(db, 'bugReports'), where('status', '==', statusFilter), orderBy('submittedAt', 'desc'));
-      }
-      
-      const querySnapshot = await getDocs(bugQuery);
-      let reports = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-
-      // Filter by severity if needed
-      if (severityFilter !== 'all') {
-        reports = reports.filter(report => report.severity === severityFilter);
-      }
-
-      setBugReports(reports);
-    } catch (error) {
-      console.error('Error fetching bug reports:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchFeedback = async () => {
-    try {
-      setLoading(true);
-      const feedbackQuery = query(collection(db, 'feedback'), orderBy('submittedAt', 'desc'));
-      const querySnapshot = await getDocs(feedbackQuery);
-      let feedbackData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-
-      // Filter by rating if needed
-      if (ratingFilter !== 'all') {
-        feedbackData = feedbackData.filter(item => item.rating === ratingFilter);
-      }
-
-      setFeedback(feedbackData);
-    } catch (error) {
-      console.error('Error fetching feedback:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleMarkResolved = async (bugId) => {
     try {
       setUpdatingStatus(true);
-      const bugDocRef = doc(db, 'bugReports', bugId);
-      await updateDoc(bugDocRef, { status: 'resolved' });
-      
-      setBugReports(prevReports =>
-        prevReports.map(report =>
-          report.id === bugId ? { ...report, status: 'resolved' } : report
-        )
-      );
-      
-      if (selectedBug && selectedBug.id === bugId) {
-        setSelectedBug({ ...selectedBug, status: 'resolved' });
-      }
-      
-      alert('Bug report marked as resolved!');
+      await updateDoc(doc(db, "bugReports", bugId), { status: "resolved" });
+      setBugReports((prev) => prev.map((report) => (report.id === bugId ? { ...report, status: "resolved" } : report)));
+      if (selectedBug?.id === bugId) setSelectedBug({ ...selectedBug, status: "resolved" });
+      toast("Bug status updated to resolved.");
     } catch (error) {
-      console.error('Error updating bug status:', error);
-      alert('Error updating bug status. Please try again.');
+      console.error("Error updating bug status:", error);
+      toast("Error updating bug status. Please try again.");
     } finally {
       setUpdatingStatus(false);
     }
   };
 
-  const openBugDetails = (bug) => {
-    setSelectedBug(bug);
-    setBugModalOpen(true);
-  };
+  const filteredBugs = bugReports.filter((bug) => {
+    const matchesStatus = statusFilter === "all" || (bug.status || "open") === statusFilter;
+    const matchesSeverity = severityFilter === "all" || bug.severity === severityFilter;
+    const q = bugSearch.toLowerCase();
+    const matchesSearch =
+      !q ||
+      (bug.title || "").toLowerCase().includes(q) ||
+      (bug.userEmail || "").toLowerCase().includes(q) ||
+      (bug.description || "").toLowerCase().includes(q);
+    return matchesStatus && matchesSeverity && matchesSearch;
+  });
 
-  const openFeedbackDetails = (item) => {
-    setSelectedFeedback(item);
-    setFeedbackModalOpen(true);
-  };
+  const filteredFeedback = feedback.filter((item) => {
+    const matchesRating = ratingFilter === "all" || String(item.rating) === String(ratingFilter);
+    const q = feedbackSearch.toLowerCase();
+    const matchesSearch =
+      !q ||
+      (item.userEmail || "").toLowerCase().includes(q) ||
+      (item.feedback || "").toLowerCase().includes(q) ||
+      (item.suggestions || "").toLowerCase().includes(q);
+    return matchesRating && matchesSearch;
+  });
 
-  const getSeverityColor = (severity) => {
-    const colors = {
-      low: 'bg-blue-100 text-blue-800',
-      medium: 'bg-yellow-100 text-yellow-800',
-      high: 'bg-orange-100 text-orange-800',
-      critical: 'bg-red-100 text-red-800'
-    };
-    return colors[severity] || 'bg-gray-100 text-gray-800';
-  };
-
-  const getStatusColor = (status) => {
-    return status === 'resolved' 
-      ? 'bg-green-100 text-green-800' 
-      : 'bg-yellow-100 text-yellow-800';
-  };
-
-  const calculateAverageRating = () => {
-    if (feedback.length === 0) return 0;
-    const sum = feedback.reduce((acc, item) => acc + parseInt(item.rating || 0), 0);
-    return (sum / feedback.length).toFixed(1);
-  };
+  const openCount = bugReports.filter((bug) => (bug.status || "open") !== "resolved").length;
 
   if (loading && bugReports.length === 0 && feedback.length === 0) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mb-4"></div>
-          <p className="text-gray-400">Loading system monitoring data...</p>
-        </div>
+      <div className="page">
+        <p>Loading system monitoring data...</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Tabs */}
-      <div className="bg-white rounded-xl shadow-lg p-6">
-        <div className="flex space-x-4 border-b border-gray-200">
-          <button
-            onClick={() => setActiveTab('bugs')}
-            className={`px-4 py-2 font-medium border-b-2 transition-colors ${
-              activeTab === 'bugs'
-                ? 'border-emerald-500 text-emerald-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Bug Reports ({bugReports.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('feedback')}
-            className={`px-4 py-2 font-medium border-b-2 transition-colors ${
-              activeTab === 'feedback'
-                ? 'border-emerald-500 text-emerald-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            User Feedback ({feedback.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('health')}
-            className={`px-4 py-2 font-medium border-b-2 transition-colors ${
-              activeTab === 'health'
-                ? 'border-emerald-500 text-emerald-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Platform Health
+    <div className="page">
+      <div className="page-head">
+        <div>
+          <h1>System Monitoring</h1>
+          <p>Triage client bug reports and product feedback without mixing operational issues into the assessment content workflow.</p>
+        </div>
+        <div className="actions">
+          <button type="button" className="btn btn-secondary" onClick={load}>
+            Refresh Queue
           </button>
         </div>
       </div>
 
-      {/* Bug Reports */}
-      {activeTab === 'bugs' && (
-        <div className="space-y-6">
-          {/* Filters */}
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                >
-                  <option value="all">All Statuses</option>
-                  <option value="open">Open</option>
-                  <option value="resolved">Resolved</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Severity</label>
-                <select
-                  value={severityFilter}
-                  onChange={(e) => setSeverityFilter(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                >
-                  <option value="all">All Severities</option>
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                  <option value="critical">Critical</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Bug Reports Table */}
-          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900">Bug Reports</h2>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Title</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Severity</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Submitted</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {bugReports.length === 0 ? (
-                    <tr>
-                      <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
-                        No bug reports found
-                      </td>
-                    </tr>
-                  ) : (
-                    bugReports.map((bug) => {
-                      const submittedDate = bug.submittedAt?.toDate
-                        ? bug.submittedAt.toDate().toLocaleDateString()
-                        : 'N/A';
-
-                      return (
-                        <tr key={bug.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4">
-                            <div className="text-sm font-medium text-gray-900">{bug.title}</div>
-                            <div className="text-sm text-gray-500">{bug.userEmail}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getSeverityColor(bug.severity)}`}>
-                              {bug.severity || 'N/A'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(bug.status)}`}>
-                              {bug.status || 'open'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {submittedDate}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm">
-                            <div className="flex space-x-2">
-                              <button
-                                onClick={() => openBugDetails(bug)}
-                                className="text-emerald-600 hover:text-emerald-900 font-medium"
-                              >
-                                View
-                              </button>
-                              {bug.status !== 'resolved' && (
-                                <button
-                                  onClick={() => handleMarkResolved(bug.id)}
-                                  disabled={updatingStatus}
-                                  className="text-blue-600 hover:text-blue-900 font-medium disabled:opacity-50"
-                                >
-                                  Mark Resolved
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
+      <section className="panel">
+        <div className="panel-body">
+          <div className="tabs">
+            <button type="button" className={`tab${activeTab === "bugs" ? " active" : ""}`} onClick={() => setActiveTab("bugs")}>
+              Bug Reports <span className="pill attention">{openCount} open</span>
+            </button>
+            <button
+              type="button"
+              className={`tab${activeTab === "feedback" ? " active" : ""}`}
+              onClick={() => setActiveTab("feedback")}
+            >
+              Product Feedback <span className="pill info">{feedback.length}</span>
+            </button>
           </div>
         </div>
-      )}
 
-      {/* User Feedback */}
-      {activeTab === 'feedback' && (
-        <div className="space-y-6">
-          {/* Summary Card */}
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Feedback Summary</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-4 bg-blue-50 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">{feedback.length}</div>
-                <div className="text-sm text-gray-600">Total Feedback</div>
-              </div>
-              <div className="p-4 bg-green-50 rounded-lg">
-                <div className="text-2xl font-bold text-green-600">{calculateAverageRating()}</div>
-                <div className="text-sm text-gray-600">Average Rating</div>
-              </div>
-              <div className="p-4 bg-purple-50 rounded-lg">
-                <div className="text-2xl font-bold text-purple-600">
-                  {feedback.filter(f => parseInt(f.rating) >= 4).length}
-                </div>
-                <div className="text-sm text-gray-600">Positive Ratings (4+)</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Filters */}
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Rating Filter</label>
-              <select
-                value={ratingFilter}
-                onChange={(e) => setRatingFilter(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
-              >
-                <option value="all">All Ratings</option>
-                <option value="5">5 Stars</option>
-                <option value="4">4 Stars</option>
-                <option value="3">3 Stars</option>
-                <option value="2">2 Stars</option>
-                <option value="1">1 Star</option>
+        {activeTab === "bugs" ? (
+          <>
+            <div className="toolbar compact">
+              <input placeholder="Search bugs" value={bugSearch} onChange={(e) => setBugSearch(e.target.value)} />
+              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                <option value="all">All status</option>
+                <option value="open">Open</option>
+                <option value="resolved">Resolved</option>
               </select>
+              <select value={severityFilter} onChange={(e) => setSeverityFilter(e.target.value)}>
+                <option value="all">All severity</option>
+                <option value="critical">Critical</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </select>
+              <button type="button" className="btn btn-secondary" onClick={load}>
+                Filter
+              </button>
             </div>
-          </div>
-
-          {/* Feedback Table */}
-          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900">User Feedback</h2>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
+            <div className="table-wrap">
+              <table className="data-table">
+                <thead>
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rating</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Submitted</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    <th>Issue</th>
+                    <th>User</th>
+                    <th>Severity</th>
+                    <th>Status</th>
+                    <th>Submitted</th>
+                    <th />
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {feedback.length === 0 ? (
+                <tbody>
+                  {filteredBugs.length === 0 ? (
                     <tr>
-                      <td colSpan="4" className="px-6 py-8 text-center text-gray-500">
-                        No feedback found
-                      </td>
+                      <td colSpan="6">No bug reports found</td>
                     </tr>
                   ) : (
-                    feedback.map((item) => {
-                      const submittedDate = item.submittedAt?.toDate
-                        ? item.submittedAt.toDate().toLocaleDateString()
-                        : 'N/A';
-
+                    filteredBugs.map((bug) => {
+                      const severity = severityMeta(bug.severity);
+                      const status = statusMeta(bug.status);
                       return (
-                        <tr key={item.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4">
-                            <div className="text-sm font-medium text-gray-900">{item.userEmail}</div>
+                        <tr key={bug.id}>
+                          <td>
+                            <strong>{bug.title}</strong>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <span className="text-yellow-500">{'⭐'.repeat(parseInt(item.rating) || 0)}</span>
-                              <span className="ml-2 text-sm text-gray-600">({item.rating}/5)</span>
-                            </div>
+                          <td>{bug.userEmail}</td>
+                          <td>
+                            <span className={`pill ${severity.className}`}>{severity.label}</span>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {submittedDate}
+                          <td>
+                            <span className={`pill ${status.className}`}>{status.label}</span>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm">
-                            <button
-                              onClick={() => openFeedbackDetails(item)}
-                              className="text-emerald-600 hover:text-emerald-900 font-medium"
-                            >
-                              View Details
+                          <td>{formatDate(bug.submittedAt, true)}</td>
+                          <td>
+                            <button type="button" className="btn btn-secondary" onClick={() => setSelectedBug(bug)}>
+                              Inspect
                             </button>
                           </td>
                         </tr>
@@ -401,208 +183,166 @@ export default function SystemMonitoring() {
                 </tbody>
               </table>
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        ) : (
+          <>
+            <div className="toolbar compact">
+              <input placeholder="Search feedback" value={feedbackSearch} onChange={(e) => setFeedbackSearch(e.target.value)} />
+              <select value={ratingFilter} onChange={(e) => setRatingFilter(e.target.value)}>
+                <option value="all">All ratings</option>
+                <option value="5">5</option>
+                <option value="4">4</option>
+                <option value="3">3</option>
+                <option value="2">2</option>
+                <option value="1">1</option>
+              </select>
+              <select>
+                <option>All types</option>
+                <option>feedback</option>
+              </select>
+              <button type="button" className="btn btn-secondary" onClick={load}>
+                Filter
+              </button>
+            </div>
+            <div className="table-wrap">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>User</th>
+                    <th>Rating</th>
+                    <th>Feedback</th>
+                    <th>Submitted</th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredFeedback.length === 0 ? (
+                    <tr>
+                      <td colSpan="5">No feedback found</td>
+                    </tr>
+                  ) : (
+                    filteredFeedback.map((item) => (
+                      <tr key={item.id}>
+                        <td>{item.userEmail}</td>
+                        <td>{"★".repeat(parseInt(item.rating, 10) || 0)}</td>
+                        <td>{item.feedback}</td>
+                        <td>{formatDate(item.submittedAt, true)}</td>
+                        <td>
+                          <button type="button" className="btn btn-secondary" onClick={() => setSelectedFeedback(item)}>
+                            View
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </section>
 
-      {/* Platform Health */}
-      {activeTab === 'health' && (
-        <div className="space-y-6">
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Platform Health Status</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                <div className="text-sm font-medium text-gray-600 mb-2">System Status</div>
-                <div className="text-2xl font-bold text-green-600">Operational</div>
-              </div>
-              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="text-sm font-medium text-gray-600 mb-2">Open Bug Reports</div>
-                <div className="text-2xl font-bold text-blue-600">
-                  {bugReports.filter(b => b.status === 'open').length}
+      <div className={`modal-backdrop${selectedBug ? " open" : ""}`} onClick={() => setSelectedBug(null)}>
+        {selectedBug ? (
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <h3>{selectedBug.title}</h3>
+              <button type="button" className="btn btn-secondary" onClick={() => setSelectedBug(null)}>
+                Close
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="grid-2">
+                <div>
+                  <label>Severity</label>
+                  <span className={`pill ${severityMeta(selectedBug.severity).className}`}>
+                    {severityMeta(selectedBug.severity).label}
+                  </span>
+                </div>
+                <div>
+                  <label>Status</label>
+                  <span className={`pill ${statusMeta(selectedBug.status).className}`}>
+                    {statusMeta(selectedBug.status).label}
+                  </span>
                 </div>
               </div>
-              <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
-                <div className="text-sm font-medium text-gray-600 mb-2">Recent Activity</div>
-                <div className="text-2xl font-bold text-purple-600">Active</div>
+              <div className="form-group" style={{ marginTop: 15 }}>
+                <label>Title</label>
+                <div className="callout">
+                  <strong>{selectedBug.title}</strong>
+                </div>
+              </div>
+              <div className="form-group">
+                <label>Description</label>
+                <div className="callout">{selectedBug.description}</div>
+              </div>
+              <div className="grid-2">
+                <div className="form-group">
+                  <label>Steps</label>
+                  <div className="callout">{selectedBug.stepsToReproduce || "Not provided"}</div>
+                </div>
+                <div>
+                  <div className="form-group">
+                    <label>Expected</label>
+                    <div className="callout">{selectedBug.expectedBehavior || "Not provided"}</div>
+                  </div>
+                  <div className="form-group">
+                    <label>Actual</label>
+                    <div className="callout">{selectedBug.actualBehavior || "Not provided"}</div>
+                  </div>
+                </div>
+              </div>
+              <div className="form-group">
+                <label>Submitted by</label>
+                <div className="callout">{selectedBug.userEmail}</div>
+              </div>
+            </div>
+            <div className="modal-foot">
+              {selectedBug.status !== "resolved" ? (
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={updatingStatus}
+                  onClick={() => handleMarkResolved(selectedBug.id)}
+                >
+                  Mark Resolved
+                </button>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+      </div>
+
+      <div className={`modal-backdrop${selectedFeedback ? " open" : ""}`} onClick={() => setSelectedFeedback(null)}>
+        {selectedFeedback ? (
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <h3>Feedback Detail</h3>
+              <button type="button" className="btn btn-secondary" onClick={() => setSelectedFeedback(null)}>
+                Close
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label>User</label>
+                <div className="callout">{selectedFeedback.userEmail}</div>
+              </div>
+              <div className="form-group">
+                <label>Rating</label>
+                <div className="callout">{selectedFeedback.rating}/5</div>
+              </div>
+              <div className="form-group">
+                <label>Feedback</label>
+                <div className="callout">{selectedFeedback.feedback}</div>
+              </div>
+              <div className="form-group">
+                <label>Suggestions</label>
+                <div className="callout">{selectedFeedback.suggestions || "None"}</div>
               </div>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Bug Details Modal */}
-      <Transition show={bugModalOpen} as={Fragment}>
-        <Dialog onClose={() => setBugModalOpen(false)} className="relative z-50">
-          <Transition.Child
-            as={Fragment}
-            enter="ease-out duration-300"
-            enterFrom="opacity-0"
-            enterTo="opacity-100"
-            leave="ease-in duration-200"
-            leaveFrom="opacity-100"
-            leaveTo="opacity-0"
-          >
-            <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
-          </Transition.Child>
-
-          <div className="fixed inset-0 flex items-center justify-center p-4">
-            <Transition.Child
-              as={Fragment}
-              enter="ease-out duration-300"
-              enterFrom="opacity-0 scale-95"
-              enterTo="opacity-100 scale-100"
-              leave="ease-in duration-200"
-              leaveFrom="opacity-100 scale-100"
-              leaveTo="opacity-0 scale-95"
-            >
-              <Dialog.Panel className="mx-auto max-w-2xl w-full rounded-xl bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto">
-                <Dialog.Title className="text-2xl font-bold text-gray-900 mb-4">
-                  Bug Report Details
-                </Dialog.Title>
-
-                {selectedBug && (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Title</label>
-                      <p className="text-gray-900">{selectedBug.title}</p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Severity</label>
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getSeverityColor(selectedBug.severity)}`}>
-                          {selectedBug.severity}
-                        </span>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Status</label>
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(selectedBug.status)}`}>
-                          {selectedBug.status}
-                        </span>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Description</label>
-                      <p className="text-gray-900 whitespace-pre-wrap">{selectedBug.description}</p>
-                    </div>
-                    {selectedBug.stepsToReproduce && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Steps to Reproduce</label>
-                        <p className="text-gray-900 whitespace-pre-wrap">{selectedBug.stepsToReproduce}</p>
-                      </div>
-                    )}
-                    {selectedBug.expectedBehavior && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Expected Behavior</label>
-                        <p className="text-gray-900 whitespace-pre-wrap">{selectedBug.expectedBehavior}</p>
-                      </div>
-                    )}
-                    {selectedBug.actualBehavior && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Actual Behavior</label>
-                        <p className="text-gray-900 whitespace-pre-wrap">{selectedBug.actualBehavior}</p>
-                      </div>
-                    )}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Submitted By</label>
-                      <p className="text-gray-900">{selectedBug.userEmail}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Submitted At</label>
-                      <p className="text-gray-900">
-                        {selectedBug.submittedAt?.toDate
-                          ? selectedBug.submittedAt.toDate().toLocaleString()
-                          : 'N/A'}
-                      </p>
-                    </div>
-                    {selectedBug.status !== 'resolved' && (
-                      <div className="flex justify-end pt-4">
-                        <button
-                          onClick={() => {
-                            handleMarkResolved(selectedBug.id);
-                            setBugModalOpen(false);
-                          }}
-                          className="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors"
-                        >
-                          Mark as Resolved
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </Dialog.Panel>
-            </Transition.Child>
-          </div>
-        </Dialog>
-      </Transition>
-
-      {/* Feedback Details Modal */}
-      <Transition show={feedbackModalOpen} as={Fragment}>
-        <Dialog onClose={() => setFeedbackModalOpen(false)} className="relative z-50">
-          <Transition.Child
-            as={Fragment}
-            enter="ease-out duration-300"
-            enterFrom="opacity-0"
-            enterTo="opacity-100"
-            leave="ease-in duration-200"
-            leaveFrom="opacity-100"
-            leaveTo="opacity-0"
-          >
-            <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
-          </Transition.Child>
-
-          <div className="fixed inset-0 flex items-center justify-center p-4">
-            <Transition.Child
-              as={Fragment}
-              enter="ease-out duration-300"
-              enterFrom="opacity-0 scale-95"
-              enterTo="opacity-100 scale-100"
-              leave="ease-in duration-200"
-              leaveFrom="opacity-100 scale-100"
-              leaveTo="opacity-0 scale-95"
-            >
-              <Dialog.Panel className="mx-auto max-w-lg w-full rounded-xl bg-white p-6 shadow-xl">
-                <Dialog.Title className="text-2xl font-bold text-gray-900 mb-4">
-                  Feedback Details
-                </Dialog.Title>
-
-                {selectedFeedback && (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Rating</label>
-                      <div className="flex items-center mt-1">
-                        <span className="text-yellow-500 text-2xl">{'⭐'.repeat(parseInt(selectedFeedback.rating) || 0)}</span>
-                        <span className="ml-2 text-gray-600">({selectedFeedback.rating}/5)</span>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Feedback</label>
-                      <p className="text-gray-900 whitespace-pre-wrap mt-1">{selectedFeedback.feedback}</p>
-                    </div>
-                    {selectedFeedback.suggestions && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Suggestions</label>
-                        <p className="text-gray-900 whitespace-pre-wrap mt-1">{selectedFeedback.suggestions}</p>
-                      </div>
-                    )}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Submitted By</label>
-                      <p className="text-gray-900">{selectedFeedback.userEmail}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Submitted At</label>
-                      <p className="text-gray-900">
-                        {selectedFeedback.submittedAt?.toDate
-                          ? selectedFeedback.submittedAt.toDate().toLocaleString()
-                          : 'N/A'}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </Dialog.Panel>
-            </Transition.Child>
-          </div>
-        </Dialog>
-      </Transition>
+        ) : null}
+      </div>
     </div>
   );
 }

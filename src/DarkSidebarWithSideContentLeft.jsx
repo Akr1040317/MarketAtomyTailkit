@@ -1,19 +1,29 @@
 import { useState, useEffect } from "react";
 import { auth, db } from "./firebaseConfig";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, collection, getDocs, query, where, limit } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
-import companyLogo from "./assets/MarketAtomy-HOR-300x92.png";
-import { Menu, MenuButton, MenuItems, MenuItem, Transition } from "@headlessui/react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import FeedbackModal from "./components/FeedbackModal";
-import BugReportModal from "./components/BugReportModal";
 
 // Import your separate view components
 import Dashboard from "./Dashboard.jsx";
-import Assessment from "./Assessment.jsx";
 import AssessmentUser from "./AssessmentUser.jsx";
-import AdminDashboard from "./components/AdminDashboard/AdminDashboard.jsx";
 import Reports from "./Reports.jsx";
+import Resources from "./Resources.jsx";
+import ActionPlan from "./ActionPlan.jsx";
+import ClientWorkspace from "./components/ClientWorkspace.jsx";
+import AdminWorkspace from "./components/AdminWorkspace.jsx";
+import BugReportPage from "./components/BugReportPage.jsx";
+import OnboardingPage from "./components/OnboardingPage.jsx";
+import AdminOverview from "./components/AdminDashboard/AdminOverview.jsx";
+import UserManagement from "./components/AdminDashboard/UserManagement.jsx";
+import AnalyticsDashboard from "./components/AdminDashboard/AnalyticsDashboard.jsx";
+import ContentManagement from "./components/AdminDashboard/ContentManagement.jsx";
+import SystemMonitoring from "./components/AdminDashboard/SystemMonitoring.jsx";
+import AssessmentManagement from "./components/AdminDashboard/AssessmentManagement.jsx";
+import AdminOnboarding from "./components/AdminDashboard/AdminOnboarding.jsx";
+import AdminFeedbackPage from "./components/AdminDashboard/AdminFeedbackPage.jsx";
 
 export default function DarkSidebarWithSideContentLeft() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -22,6 +32,7 @@ export default function DarkSidebarWithSideContentLeft() {
   const [activeView, setActiveView] = useState("dashboard");
   // State to hold the firstName from Firestore
   const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   // State to hold the user's role (admin, tier1, tier2, tier3, etc.)
   const [userRole, setUserRole] = useState("");
   const [userEmail, setUserEmail] = useState("");
@@ -31,7 +42,9 @@ export default function DarkSidebarWithSideContentLeft() {
   const [bugReportModalOpen, setBugReportModalOpen] = useState(false);
 
   const navigate = useNavigate();
+  const reduceMotion = useReducedMotion();
   const isDanna = (userEmail || "").toLowerCase() === "dannaolivo@gmail.com";
+  const canSwitchAdmin = userRole === "admin" || isDanna;
   const effectiveViewMode =
     viewModeOverride || (userRole === "admin" ? "admin" : "client");
   const effectiveUserRole = effectiveViewMode === "admin" ? "admin" : "tier1";
@@ -52,6 +65,7 @@ export default function DarkSidebarWithSideContentLeft() {
           if (docSnap.exists()) {
             const userData = docSnap.data();
             setFirstName(userData.firstName || "");
+            setLastName(userData.lastName || "");
             setUserRole(userData.role || "");
             // Default home screen:
             // - Admin view: Admin Dashboard
@@ -59,13 +73,29 @@ export default function DarkSidebarWithSideContentLeft() {
             const shouldGoAdminHome =
               (user.email || "").toLowerCase() === "dannaolivo@gmail.com" ||
               userData.role === "admin";
-            setActiveView(shouldGoAdminHome ? "adminDashboard" : "dashboard");
+            if (shouldGoAdminHome) {
+              setActiveView(userData.hideAdminOnboarding !== true ? "adminOnboarding" : "adminDashboard");
+            } else {
+              const resultsSnap = await getDocs(
+                query(
+                  collection(db, "sectionResults"),
+                  where("userId", "==", user.uid),
+                  limit(1)
+                )
+              );
+              if (userData.hideOnboarding !== true && resultsSnap.empty) {
+                setActiveView("onboarding");
+              } else {
+                setActiveView("dashboard");
+              }
+            }
           }
         } catch (error) {
           console.error("Error fetching user data: ", error);
         }
       } else {
         setFirstName("");
+        setLastName("");
         setUserRole("");
         setUserEmail("");
         setViewModeOverride(null);
@@ -76,7 +106,7 @@ export default function DarkSidebarWithSideContentLeft() {
 
   // Logout function with redirection to login page
   const handleLogout = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     try {
       await signOut(auth);
       navigate("/login"); // Redirect to loginpage.jsx after logout
@@ -85,533 +115,115 @@ export default function DarkSidebarWithSideContentLeft() {
     }
   };
 
+  const clientView =
+    activeView === "assessmentUser" ? (
+      <AssessmentUser setActiveView={setActiveView} />
+    ) : activeView === "reports" ? (
+      <Reports setActiveView={setActiveView} />
+    ) : activeView === "actionPlan" ? (
+      <ActionPlan setActiveView={setActiveView} />
+    ) : activeView === "resources" ? (
+      <Resources />
+    ) : activeView === "bugReport" ? (
+      <BugReportPage />
+    ) : activeView === "onboarding" ? (
+      <OnboardingPage setActiveView={setActiveView} firstName={firstName} lastName={lastName} />
+    ) : (
+      <Dashboard setActiveView={setActiveView} viewMode="client" />
+    );
+
+  if (effectiveViewMode === "client") {
+    return (
+      <>
+        <ClientWorkspace
+          activeView={activeView}
+          setActiveView={setActiveView}
+          firstName={firstName}
+          lastName={lastName}
+          onLogout={handleLogout}
+          onFeedback={() => setFeedbackModalOpen(true)}
+          canSwitchAdmin={canSwitchAdmin}
+          onSwitchAdmin={
+            canSwitchAdmin
+              ? () => {
+                  setViewModeOverride("admin");
+                  setActiveView("adminDashboard");
+                }
+              : undefined
+          }
+        >
+          {reduceMotion ? (
+            clientView
+          ) : (
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeView}
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -12 }}
+                transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+              >
+                {clientView}
+              </motion.div>
+            </AnimatePresence>
+          )}
+        </ClientWorkspace>
+        <FeedbackModal isOpen={feedbackModalOpen} onClose={() => setFeedbackModalOpen(false)} />
+      </>
+    );
+  }
+
+  const adminView =
+    activeView === "adminUsers" ? (
+      <UserManagement />
+    ) : activeView === "adminAnalytics" ? (
+      <AnalyticsDashboard />
+    ) : activeView === "adminContent" ? (
+      <ContentManagement />
+    ) : activeView === "adminMonitoring" ? (
+      <SystemMonitoring />
+    ) : activeView === "assessment" ? (
+      <AssessmentManagement />
+    ) : activeView === "adminFeedback" ? (
+      <AdminFeedbackPage />
+    ) : activeView === "adminBugReport" ? (
+      <BugReportPage />
+    ) : activeView === "adminOnboarding" ? (
+      <AdminOnboarding setActiveView={setActiveView} />
+    ) : (
+      <AdminOverview setActiveView={setActiveView} />
+    );
+
   return (
     <>
-      {/* Page Container */}
-      <div
-        id="page-container"
-        className={`mx-auto flex min-h-dvh w-full min-w-80 flex-col bg-[#101b31] dark:text-gray-100 ${
-          desktopSidebarOpen ? "lg:pl-72" : ""
-        }`}
+      <AdminWorkspace
+        activeView={activeView}
+        setActiveView={setActiveView}
+        firstName={firstName}
+        lastName={lastName}
+        onLogout={handleLogout}
+        onSwitchClient={() => {
+          setViewModeOverride("client");
+          setActiveView("dashboard");
+        }}
       >
-        {/* Page Sidebar */}
-        <nav
-          id="page-sidebar"
-          aria-label="Main Sidebar Navigation"
-          className={`fixed top-0 bottom-0 left-0 z-50 flex h-full w-full flex-col border-r border-gray-800 bg-gray-800 text-gray-200 transition-transform duration-500 ease-out lg:w-72 ${
-            desktopSidebarOpen ? "lg:translate-x-0" : "lg:-translate-x-full"
-          } ${mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
-        >
-          {/* Sidebar Header */}
-          <div className="flex h-16 w-full flex-none items-center justify-between bg-gray-600/25 px-4 lg:justify-center">
-            {/* Brand */}
-            <a
-              href="#"
-              className="group inline-flex items-center gap-2 text-lg font-bold tracking-wide text-gray-100 hover:text-gray-300"
+        {reduceMotion ? (
+          adminView
+        ) : (
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeView}
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
             >
-              <img
-                src={companyLogo}
-                alt="Company Logo"
-                className="mx-auto h-10 w-auto object-contain"
-              />
-            </a>
-            {/* END Brand */}
-
-            {/* Close Sidebar on Mobile */}
-            <div className="lg:hidden">
-              <button
-                onClick={() => setMobileSidebarOpen(false)}
-                type="button"
-                className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm leading-5 font-semibold text-gray-300 hover:border-gray-600 hover:text-gray-200 hover:shadow-xs focus:ring-3 focus:ring-gray-600/40 active:border-gray-700 active:shadow-none"
-              >
-                <svg
-                  className="hi-mini hi-x-mark -mx-0.5 inline-block size-5"
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  aria-hidden="true"
-                >
-                  <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
-                </svg>
-              </button>
-            </div>
-            {/* END Close Sidebar on Mobile */}
-          </div>
-          {/* END Sidebar Header */}
-
-          {/* Sidebar Navigation */}
-          <div className="overflow-y-auto flex flex-col h-full">
-            <div className="w-full p-4 flex-1">
-              <nav className="space-y-2">
-                {/* Dashboard Link - Client view only */}
-                {effectiveUserRole !== "admin" && (
-                  <a
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setActiveView("dashboard");
-                    }}
-                    className={`group flex items-center gap-3 rounded-lg border border-transparent px-3 py-3 text-base font-medium transition-all ${
-                      activeView === "dashboard"
-                        ? "bg-gray-700/75 text-white shadow-md"
-                        : "text-gray-200 hover:bg-gray-700/75 hover:text-white active:border-gray-600"
-                    }`}
-                  >
-                    <span className="flex flex-none items-center">
-                      <svg
-                        className="hi-outline hi-home inline-block size-6"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        strokeWidth="1.5"
-                        stroke="currentColor"
-                        aria-hidden="true"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"
-                        />
-                      </svg>
-                    </span>
-                    <span className="grow">Dashboard</span>
-                  </a>
-                )}
-
-                {/* Assessment / Admin links */}
-                {effectiveUserRole === "admin" ? (
-                  <>
-                    {/* Admin Dashboard (top) */}
-                    <a
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setActiveView("adminDashboard");
-                      }}
-                      className={`group flex items-center gap-3 rounded-lg border border-transparent px-3 py-3 text-base font-medium transition-all ${
-                        activeView === "adminDashboard"
-                          ? "bg-gray-700/75 text-white shadow-md"
-                          : "text-gray-200 hover:bg-gray-700/75 hover:text-white active:border-gray-600"
-                      }`}
-                    >
-                      <span className="flex flex-none items-center">
-                        <svg
-                          className="hi-outline inline-block size-6"
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          strokeWidth="1.5"
-                          stroke="currentColor"
-                          aria-hidden="true"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"
-                          />
-                        </svg>
-                      </span>
-                      <span className="grow">Admin Dashboard</span>
-                    </a>
-
-                    {/* Assessment Management (below) */}
-                    <a
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setActiveView("assessment");
-                      }}
-                      className={`group flex items-center gap-3 rounded-lg border border-transparent px-3 py-3 text-base font-medium transition-all ${
-                        activeView === "assessment"
-                          ? "bg-gray-700/75 text-white shadow-md"
-                          : "text-gray-200 hover:bg-gray-700/75 hover:text-white active:border-gray-600"
-                      }`}
-                    >
-                      <span className="flex flex-none items-center">
-                        <svg
-                          className="hi-outline inline-block size-6"
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          strokeWidth="1.5"
-                          stroke="currentColor"
-                          aria-hidden="true"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
-                          />
-                        </svg>
-                      </span>
-                      <span className="grow">Assessment Management</span>
-                    </a>
-                  </>
-                ) : (
-                  <a
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setActiveView("assessmentUser");
-                    }}
-                    className={`group flex items-center gap-3 rounded-lg border border-transparent px-3 py-3 text-base font-medium transition-all ${
-                      activeView === "assessmentUser"
-                        ? "bg-gray-700/75 text-white shadow-md"
-                        : "text-gray-200 hover:bg-gray-700/75 hover:text-white active:border-gray-600"
-                    }`}
-                  >
-                    <span className="flex flex-none items-center">
-                      <svg
-                        className="hi-outline inline-block size-6"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        strokeWidth="1.5"
-                        stroke="currentColor"
-                        aria-hidden="true"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
-                        />
-                      </svg>
-                    </span>
-                    <span className="grow">Assessment</span>
-                  </a>
-                )}
-              </nav>
-            </div>
-            
-            {/* Bottom Section with Feedback, Bug Report, and Logout */}
-            <div className="w-full p-4 border-t border-gray-700 space-y-2">
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  setFeedbackModalOpen(true);
-                }}
-                className="w-full flex items-center gap-3 rounded-lg border border-transparent px-3 py-3 text-base font-medium text-gray-200 hover:bg-gray-700/75 hover:text-white transition-all"
-              >
-                <span className="flex flex-none items-center">
-                  <svg
-                    className="hi-outline inline-block size-6"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth="1.5"
-                    stroke="currentColor"
-                    aria-hidden="true"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"
-                    />
-                  </svg>
-                </span>
-                <span className="grow text-left">Give Feedback</span>
-              </button>
-              
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  setBugReportModalOpen(true);
-                }}
-                className="w-full flex items-center gap-3 rounded-lg border border-transparent px-3 py-3 text-base font-medium text-gray-200 hover:bg-gray-700/75 hover:text-white transition-all"
-              >
-                <span className="flex flex-none items-center">
-                  <svg
-                    className="hi-outline inline-block size-6"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth="1.5"
-                    stroke="currentColor"
-                    aria-hidden="true"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
-                    />
-                  </svg>
-                </span>
-                <span className="grow text-left">Report a Bug</span>
-              </button>
-              
-              <button
-                onClick={handleLogout}
-                className="w-full flex items-center justify-center gap-3 rounded-lg bg-red-600 hover:bg-red-700 px-3 py-3 text-base font-semibold text-white transition-all shadow-md hover:shadow-lg"
-              >
-                <svg
-                  className="hi-outline inline-block size-6"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth="1.5"
-                  stroke="currentColor"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"
-                  />
-                </svg>
-                <span>Logout</span>
-              </button>
-            </div>
-          </div>
-          {/* END Sidebar Navigation */}
-        </nav>
-        {/* END Page Sidebar */}
-
-        {/* Page Header */}
-        <header
-          id="page-header"
-          className={`fixed top-0 right-0 left-0 z-30 flex h-16 flex-none items-center bg-[#10172A] dark:bg-gray-800 ${
-            desktopSidebarOpen ? "lg:pl-72" : ""
-          }`}
-          style={{ boxShadow: "0 10px 40px #162442" }}
-        >
-          <div className="mx-auto flex w-full max-w-10xl justify-between px-4 lg:px-8">
-            {/* Left Section */}
-            <div className="flex items-center gap-2">
-              {/* Toggle Sidebar on Desktop */}
-              <div className="hidden lg:block">
-                <button
-                  onClick={() => setDesktopSidebarOpen(!desktopSidebarOpen)}
-                  type="button"
-                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm leading-5 font-semibold text-gray-800 hover:border-gray-300 hover:text-gray-900 hover:shadow-xs focus:ring-3 focus:ring-gray-300/25 active:border-gray-200 active:shadow-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-gray-600 dark:hover:text-gray-200 dark:focus:ring-gray-600/40 dark:active:border-gray-700"
-                >
-                  <svg
-                    className="hi-solid hi-menu-alt-1 inline-block size-5"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h6a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </button>
-              </div>
-              {/* END Toggle Sidebar on Desktop */}
-
-              {/* Toggle Sidebar on Mobile */}
-              <div className="lg:hidden">
-                <button
-                  onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
-                  type="button"
-                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm leading-5 font-semibold text-gray-800 hover:border-gray-300 hover:text-gray-900 hover:shadow-xs focus:ring-3 focus:ring-gray-300/25 active:border-gray-200 active:shadow-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-gray-600 dark:hover:text-gray-200 dark:focus:ring-gray-600/40 dark:active:border-gray-700"
-                >
-                  <svg
-                    className="hi-solid hi-menu-alt-1 inline-block size-5"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h6a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </button>
-              </div>
-              {/* END Toggle Sidebar on Mobile */}
-
-              <div className="lg:hidden">
-                <button
-                  type="button"
-                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm leading-5 font-semibold text-gray-800 hover:border-gray-300 hover:text-gray-900 hover:shadow-xs focus:ring-3 focus:ring-gray-300/25 active:border-gray-200 active:shadow-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-gray-600 dark:hover:text-gray-200 dark:focus:ring-gray-600/40 dark:active:border-gray-700"
-                >
-                  <svg
-                    className="hi-solid hi-search inline-block size-5"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </button>
-              </div>
-              {/* END Search */}
-            </div>
-            {/* END Left Section */}
-
-            {/* Center Section (Large Screens) */}
-            <div className="hidden lg:flex flex-1 justify-center">
-              <span className="text-xl text-white font-semibold">
-                {`Welcome to the BHC${
-                  effectiveViewMode === "admin" ? " (Admin View)" : " (Client View)"
-                }`}
-              </span>
-            </div>
-            {/* Right Section */}
-            <div className="flex items-center gap-2">
-              {isDanna && (
-                <div className="hidden sm:inline-flex items-center rounded-lg border border-emerald-500/30 bg-gray-800/40 p-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setViewModeOverride("admin");
-                      setActiveView("adminDashboard");
-                    }}
-                    className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
-                      effectiveViewMode === "admin"
-                        ? "bg-emerald-500 text-gray-900"
-                        : "text-gray-200 hover:bg-gray-700/60"
-                    }`}
-                  >
-                    Admin
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setViewModeOverride("client");
-                      setActiveView("dashboard");
-                    }}
-                    className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
-                      effectiveViewMode === "client"
-                        ? "bg-white text-gray-900"
-                        : "text-gray-200 hover:bg-gray-700/60"
-                    }`}
-                  >
-                    Client
-                  </button>
-                </div>
-              )}
-              {isAdminMode && (
-                <span className="hidden sm:inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-200 border border-emerald-500/30">
-                  Admin Mode
-                </span>
-              )}
-              {/* User Dropdown */}
-              <Menu as="div" className="relative inline-block">
-                <MenuButton className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm leading-5 font-semibold text-gray-800 hover:border-gray-300 hover:text-gray-900 hover:shadow-xs focus:ring-3 focus:ring-gray-300/25 active:border-gray-200 active:shadow-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-gray-600 dark:hover:text-gray-200 dark:focus:ring-gray-600/40 dark:active:border-gray-700">
-                  <svg
-                    className="hi-mini hi-user-circle inline-block size-5 sm:hidden"
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                    aria-hidden="true"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-5.5-2.5a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0zM10 12a5.99 5.99 0 00-4.793 2.39A6.483 6.483 0 0010 16.5a6.483 6.483 0 004.793-2.11A5.99 5.99 0 0010 12z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  <span className="hidden sm:inline">{firstName}</span>
-                  <svg
-                    className="hi-mini hi-chevron-down hidden size-5 opacity-40 sm:inline-block"
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                    aria-hidden="true"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </MenuButton>
-                <Transition
-                  enter="transition ease-out duration-100"
-                  enterFrom="opacity-0 scale-90"
-                  enterTo="opacity-100 scale-100"
-                  leave="transition ease-in duration-75"
-                  leaveFrom="opacity-100 scale-100"
-                  leaveTo="opacity-0 scale-90"
-                >
-                  <MenuItems
-                    modal={false}
-                    className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-lg shadow-xl focus:outline-hidden dark:shadow-gray-900"
-                  >
-                    <div className="divide-y divide-gray-100 rounded-lg bg-white ring-1 ring-black/5 dark:divide-gray-700 dark:bg-gray-800 dark:ring-gray-700">
-                      {/* ... Dropdown menu items remain unchanged ... */}
-                      <MenuItem>
-                        {({ active }) => (
-                          <a
-                            href="#"
-                            onClick={handleLogout}
-                            className={`${
-                              active ? "bg-gray-100 dark:bg-gray-700" : ""
-                            } block px-4 py-2 text-sm text-gray-700 dark:text-gray-300`}
-                          >
-                            Log out
-                          </a>
-                        )}
-                      </MenuItem>
-                    </div>
-                  </MenuItems>
-                </Transition>
-                {/* END Dropdown */}
-              </Menu>
-              {/* END User Dropdown */}
-            </div>
-            {/* END Right Section */}
-          </div>
-        </header>
-        {/* END Page Header */}
-
-        {/* Page Content */}
-        <main
-          id="page-content"
-          className="flex max-w-full flex-auto flex-col pt-16 lg:flex-row"
-        >
-          {/* The active view now entirely manages its own side content */}
-          <div className="mx-auto flex w-full max-w-10xl grow flex-col p-4 lg:p-8">
-            {activeView === "dashboard" ? (
-              <Dashboard setActiveView={setActiveView} viewMode={effectiveViewMode} />
-            ) : activeView === "assessment" ? (
-              <Assessment />
-            ) : activeView === "adminDashboard" ? (
-              <AdminDashboard />
-            ) : activeView === "reports" ? (
-              <Reports />
-            ) : (
-              <AssessmentUser />
-            )}
-          </div>
-        </main>
-        {/* END Page Content */}
-
-        {/* Page Footer */}
-        <footer id="page-footer" className="flex flex-none items-center bg-gray-800">
-          <div className="mx-auto flex w-full max-w-10xl flex-col px-4 text-center text-sm md:flex-row md:justify-between md:text-left lg:px-8">
-            <div className="pt-4 pb-1 md:pb-4">
-              <a
-                href="https://tailkit.com"
-                target="_blank"
-                className="font-medium text-blue-600 hover:text-blue-400 dark:text-blue-400 dark:hover:text-blue-300"
-                rel="noreferrer"
-              >
-                Tailkit
-              </a>{" "}
-              ©
-            </div>
-            <div className="inline-flex items-center justify-center pt-1 pb-4 md:pt-4">
-              <span className="text-white">Developed by Akshat Rastogi </span>
-              
-            </div>
-          </div>
-        </footer>
-        {/* END Page Footer */}
-      </div>
-      {/* END Page Container */}
-
-      {/* Modals */}
+              {adminView}
+            </motion.div>
+          </AnimatePresence>
+        )}
+      </AdminWorkspace>
       <FeedbackModal isOpen={feedbackModalOpen} onClose={() => setFeedbackModalOpen(false)} />
-      <BugReportModal isOpen={bugReportModalOpen} onClose={() => setBugReportModalOpen(false)} />
     </>
   );
 }
