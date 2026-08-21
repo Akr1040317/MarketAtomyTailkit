@@ -39,10 +39,10 @@ export default function FeaturesPage() {
               <div className="eyebrow">Built for business clarity</div>
               <h1>See your business as a <span className="gradient">connected system.</span></h1>
               <p className="lede">
-                The Business Health Check helps you move beyond isolated symptoms and understand the areas that influence your ability to grow, adapt, and make better decisions.
+                The Business Health Check helps you move beyond isolated symptoms and understand the areas that influence your ability to grow, adapt, and make better decisions. The complete assessment is $297, one time.
               </p>
               <div className="hero-actions">
-                <Link className="btn btn-primary" to="/signup">Get Started</Link>
+                <Link className="btn btn-primary" to="/signup">Get Started — $297</Link>
                 <Link className="btn btn-outline" to="/assessment">See How It Works</Link>
               </div>
             </Reveal>

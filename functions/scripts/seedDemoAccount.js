@@ -167,6 +167,7 @@ async function upsertUserDoc(uid) {
       role: "admin",
       hideOnboarding: true,
       hideAdminOnboarding: true,
+      assessmentPurchased: true,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       lastLoggedOn: null,
       lastLoggedOff: null,
@@ -303,6 +304,7 @@ async function seedMockClients() {
         signupMethod: "seed",
         role: "tier1",
         hideOnboarding: true,
+        assessmentPurchased: true,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
       },
       { merge: true }

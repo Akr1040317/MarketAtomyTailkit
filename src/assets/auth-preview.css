@@ -15,9 +15,208 @@
 }
 
 .ma-auth .logo img {
-  background: #fff;
-  border-radius: 8px;
-  padding: 6px 10px;
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+}
+
+.ma-auth header.nav-wrap,
+.ma-auth .nav-wrap {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(8, 15, 27, 0.72);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.065);
+  backdrop-filter: blur(18px);
+}
+
+.ma-auth nav {
+  gap: 28px;
+}
+
+.ma-auth .nav-links {
+  display: flex;
+  gap: 30px;
+  align-items: center;
+  margin-left: auto;
+}
+
+.ma-auth .nav-links a {
+  font-size: 13px;
+  font-weight: 700;
+  color: #cbd5e1;
+}
+
+.ma-auth .nav-links a:hover {
+  color: #fff;
+}
+
+.ma-auth .nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ma-auth .nav-login {
+  font-size: 13px;
+  font-weight: 700;
+  color: #dbe2ea;
+  padding: 10px 12px;
+}
+
+.ma-auth .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 22px;
+  border-radius: 12px;
+  font-weight: 800;
+  border: 1px solid transparent;
+  transition: 0.2s ease;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ma-auth .btn:hover {
+  transform: translateY(-2px);
+}
+
+.ma-auth .btn-primary {
+  color: #fff;
+  background: linear-gradient(90deg, #ff5a00, #ffdf13) !important;
+  box-shadow: 0 12px 26px rgba(255, 122, 0, 0.22);
+}
+
+.ma-auth .nav-menu-btn {
+  display: none;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #fff;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.ma-auth .mobile-links {
+  display: none;
+}
+
+.ma-auth main .container {
+  display: flex;
+  justify-content: center;
+}
+
+@media (max-width: 930px) {
+  .ma-auth .nav-links {
+    display: none;
+  }
+
+  .ma-auth .nav-login {
+    display: none;
+  }
+
+  .ma-auth .nav-menu-btn {
+    display: inline-flex;
+  }
+
+  .ma-auth .mobile-links.open {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px 20px 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(8, 15, 27, 0.96);
+  }
+
+  .ma-auth .mobile-links a {
+    text-align: left;
+    color: #cbd5e1;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 10px 4px;
+  }
+}
+
+.ma-auth footer {
+  background: #080f1b;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 44px 0 20px;
+  position: relative;
+  z-index: 2;
+  text-align: left;
+}
+
+.ma-auth .footer-grid {
+  display: grid;
+  grid-template-columns: 1.6fr 0.7fr 0.7fr;
+  gap: 45px;
+}
+
+.ma-auth .footer-logo {
+  width: 165px;
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+}
+
+.ma-auth .footer-copy {
+  max-width: 420px;
+  color: #778498;
+  font-size: 12px;
+  margin-top: 13px;
+}
+
+.ma-auth .footer-col strong {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 13px;
+}
+
+.ma-auth .footer-col a {
+  display: block;
+  color: #7f8b9d;
+  font-size: 12px;
+  margin: 8px 0;
+}
+
+.ma-auth .footer-col a:hover {
+  color: #fff;
+}
+
+.ma-auth .footer-bottom {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  margin-top: 31px;
+  padding-top: 21px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  color: #5f6b7e;
+  font-size: 10px;
+}
+
+.ma-auth .footer-credit {
+  margin-top: 16px;
+  text-align: center;
+  color: #4e5a6c;
+  font-size: 10px;
+  letter-spacing: 0.02em;
+}
+
+@media (max-width: 620px) {
+  .ma-auth .footer-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .ma-auth .footer-grid > div:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .ma-auth .footer-bottom {
+    flex-direction: column;
+  }
 }
 
 .ma-auth .toggle-password {
@@ -173,7 +372,7 @@
       display:grid;
       grid-template-rows:auto 1fr auto;
       position:relative;
-      overflow:hidden;
+      overflow-x:hidden;
     }
 
     .ma-auth-login .page::before{
@@ -214,9 +413,12 @@
     }
 
     .ma-auth-login header{
+      position:sticky;
+      top:0;
+      z-index:50;
       border-bottom:1px solid rgba(255,255,255,.06);
-      background:rgba(8,15,27,.30);
-      backdrop-filter:blur(14px);
+      background:rgba(8,15,27,.72);
+      backdrop-filter:blur(18px);
     }
 
     .ma-auth-login nav{
@@ -224,6 +426,7 @@
       display:flex;
       align-items:center;
       justify-content:space-between;
+      gap:28px;
     }
 
     .ma-auth-login .logo img{
@@ -249,19 +452,22 @@
     .ma-auth-login main{
       display:grid;
       place-items:center;
+      width:100%;
       padding:62px 0;
     }
 
     .ma-auth-login .auth-layout{
-      width:min(100%,980px);
+      width:100%;
+      max-width:1080px;
+      margin:0 auto;
       display:grid;
-      grid-template-columns:.92fr 1.08fr;
-      gap:72px;
+      grid-template-columns:1fr 1fr;
+      gap:64px;
       align-items:center;
     }
 
     .ma-auth-login .intro{
-      padding-right:16px;
+      padding-right:0;
     }
 
     .ma-auth-login .eyebrow{
@@ -522,8 +728,8 @@
     }
 
     .ma-auth-login footer{
-      padding:0 0 26px;
-      text-align:center;
+      padding:44px 0 20px;
+      text-align:left;
       color:#667386;
       font-size:10px;
       position:relative;
@@ -535,6 +741,7 @@
         grid-template-columns:1fr;
         gap:40px;
         max-width:560px;
+        margin:0 auto;
       }
 
       .ma-auth-login .intro{
@@ -644,7 +851,7 @@
       display:grid;
       grid-template-rows:auto 1fr auto;
       position:relative;
-      overflow:hidden;
+      overflow-x:hidden;
     }
 
     .ma-auth-signup .page::before{
@@ -685,9 +892,12 @@
     }
 
     .ma-auth-signup header{
+      position:sticky;
+      top:0;
+      z-index:50;
       border-bottom:1px solid rgba(255,255,255,.06);
-      background:rgba(8,15,27,.30);
-      backdrop-filter:blur(14px);
+      background:rgba(8,15,27,.72);
+      backdrop-filter:blur(18px);
     }
 
     .ma-auth-signup nav{
@@ -695,6 +905,7 @@
       display:flex;
       align-items:center;
       justify-content:space-between;
+      gap:28px;
     }
 
     .ma-auth-signup .logo img{
@@ -720,19 +931,22 @@
     .ma-auth-signup main{
       display:grid;
       place-items:center;
+      width:100%;
       padding:54px 0;
     }
 
     .ma-auth-signup .auth-layout{
-      width:min(100%,1020px);
+      width:100%;
+      max-width:1080px;
+      margin:0 auto;
       display:grid;
-      grid-template-columns:.9fr 1.1fr;
-      gap:72px;
+      grid-template-columns:1fr 1fr;
+      gap:64px;
       align-items:center;
     }
 
     .ma-auth-signup .intro{
-      padding-right:12px;
+      padding-right:0;
     }
 
     .ma-auth-signup .eyebrow{
@@ -1021,8 +1235,8 @@
     }
 
     .ma-auth-signup footer{
-      padding:0 0 26px;
-      text-align:center;
+      padding:44px 0 20px;
+      text-align:left;
       color:#667386;
       font-size:10px;
       position:relative;
@@ -1034,6 +1248,7 @@
         grid-template-columns:1fr;
         gap:40px;
         max-width:580px;
+        margin:0 auto;
       }
 
       .ma-auth-signup .intro{

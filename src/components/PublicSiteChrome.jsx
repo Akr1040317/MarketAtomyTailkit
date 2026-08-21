@@ -38,7 +38,7 @@ export default function PublicSiteChrome({ current, children }) {
             </div>
             <div className="nav-actions">
               <Link className="login" to="/login">Login</Link>
-              <Link className="btn btn-primary" to="/signup">Get Started</Link>
+              <Link className="btn btn-primary" to="/signup">Get Started — $297</Link>
               <button
                 type="button"
                 className="nav-menu-btn"
@@ -57,7 +57,7 @@ export default function PublicSiteChrome({ current, children }) {
             </Link>
           ))}
           <Link to="/login" onClick={() => setMenuOpen(false)}>Login</Link>
-          <Link to="/signup" onClick={() => setMenuOpen(false)}>Get Started</Link>
+          <Link to="/signup" onClick={() => setMenuOpen(false)}>Get Started — $297</Link>
         </div>
       </Reveal>
 
@@ -89,6 +89,7 @@ export default function PublicSiteChrome({ current, children }) {
             <span>© {new Date().getFullYear()} MarketAtomy LLC. All rights reserved.</span>
             <span>Privacy Policy</span>
           </div>
+          <div className="footer-credit">Developed by Akshat Rastogi, thank you</div>
         </div>
       </footer>
     </div>

@@ -200,6 +200,7 @@ export default function WorkspaceChrome({
               >
                 <span>{item.label}</span>
                 {item.badge ? <span className="stab-badge">{item.badge}</span> : null}
+                {item.locked ? <span className="stab-lock">Locked</span> : null}
                 {item.count != null ? <span className="stab-count">{item.count}</span> : null}
               </button>
             ))}

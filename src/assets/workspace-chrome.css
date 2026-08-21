@@ -90,9 +90,9 @@
   width: auto;
   height: 38px;
   display: block;
-  background: #fff;
-  border-radius: 8px;
-  padding: 4px 8px;
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
 }
 
 .ma-workspace .htopnav-brand {
@@ -356,6 +356,17 @@
 .ma-workspace .stab.on {
   color: var(--chrome-text);
   border-bottom-color: var(--orange, var(--chrome-brand));
+}
+
+.ma-workspace .stab-lock {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(91, 107, 127, 0.14);
+  color: var(--chrome-muted);
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .ma-workspace .stab-badge,

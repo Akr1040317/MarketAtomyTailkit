@@ -27,7 +27,13 @@ service cloud.firestore {
         'membershipExpiresAt',
         'stripeCustomerId',
         'stripeSubscriptionId',
-        'entitledCourseIds'
+        'stripeCheckoutSessionId',
+        'stripePaymentIntentId',
+        'entitledCourseIds',
+        'assessmentPurchased',
+        'assessmentPurchasedAt',
+        'assessmentPurchaseType',
+        'promoCodeUsed'
       ]);
     }
 
@@ -56,7 +62,13 @@ service cloud.firestore {
           'membershipExpiresAt',
           'stripeCustomerId',
           'stripeSubscriptionId',
-          'entitledCourseIds'
+          'stripeCheckoutSessionId',
+          'stripePaymentIntentId',
+          'entitledCourseIds',
+          'assessmentPurchased',
+          'assessmentPurchasedAt',
+          'assessmentPurchaseType',
+          'promoCodeUsed'
         ]);
       allow update: if isAdmin() || (
         isOwner(userId)

@@ -2,9 +2,13 @@ import { useState, useEffect } from "react";
 import { auth, db } from "./firebaseConfig";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, getDoc, collection, getDocs, query, where, limit } from "firebase/firestore";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import FeedbackModal from "./components/FeedbackModal";
+import WelcomePurchaseModal from "./components/WelcomePurchaseModal";
+import { hasAssessmentEntitlement } from "./utils/pricing";
+import { confirmAssessmentPurchase } from "./utils/stripeCheckout";
+import { toast } from "./components/Toast";
 
 // Import your separate view components
 import Dashboard from "./Dashboard.jsx";
@@ -40,8 +44,11 @@ export default function DarkSidebarWithSideContentLeft() {
   // Modal states
   const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
   const [bugReportModalOpen, setBugReportModalOpen] = useState(false);
+  const [hasAssessmentAccess, setHasAssessmentAccess] = useState(null);
+  const [showWelcomePurchase, setShowWelcomePurchase] = useState(false);
 
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const reduceMotion = useReducedMotion();
   const isDanna = (userEmail || "").toLowerCase() === "dannaolivo@gmail.com";
   const canSwitchAdmin = userRole === "admin" || isDanna;
@@ -74,6 +81,8 @@ export default function DarkSidebarWithSideContentLeft() {
               (user.email || "").toLowerCase() === "dannaolivo@gmail.com" ||
               userData.role === "admin";
             if (shouldGoAdminHome) {
+              setHasAssessmentAccess(true);
+              setShowWelcomePurchase(false);
               setActiveView(userData.hideAdminOnboarding !== true ? "adminOnboarding" : "adminDashboard");
             } else {
               const resultsSnap = await getDocs(
@@ -83,9 +92,16 @@ export default function DarkSidebarWithSideContentLeft() {
                   limit(1)
                 )
               );
-              if (userData.hideOnboarding !== true && resultsSnap.empty) {
+              const entitled = hasAssessmentEntitlement(userData, !resultsSnap.empty);
+              setHasAssessmentAccess(entitled);
+              if (!entitled) {
+                setShowWelcomePurchase(true);
+                setActiveView("dashboard");
+              } else if (userData.hideOnboarding !== true && resultsSnap.empty) {
+                setShowWelcomePurchase(false);
                 setActiveView("onboarding");
               } else {
+                setShowWelcomePurchase(false);
                 setActiveView("dashboard");
               }
             }
@@ -99,10 +115,54 @@ export default function DarkSidebarWithSideContentLeft() {
         setUserRole("");
         setUserEmail("");
         setViewModeOverride(null);
+        setHasAssessmentAccess(null);
+        setShowWelcomePurchase(false);
       }
     });
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    const purchase = searchParams.get("purchase");
+    const sessionId = searchParams.get("session_id");
+    if (!purchase) return;
+
+    const finish = async () => {
+      if (purchase === "success" && !auth.currentUser) return;
+      if (purchase === "success" && sessionId && auth.currentUser) {
+        try {
+          const purchased = await confirmAssessmentPurchase(sessionId);
+          if (purchased) {
+            setHasAssessmentAccess(true);
+            setShowWelcomePurchase(false);
+            setActiveView("assessmentUser");
+            toast("Purchase complete. You can begin the assessment.");
+          }
+        } catch (error) {
+          console.error("Error confirming purchase:", error);
+          toast("We could not confirm the purchase yet. Refresh in a moment or contact support.");
+        }
+      } else if (purchase === "cancel") {
+        setShowWelcomePurchase(true);
+        toast("Checkout was canceled. You can purchase when you're ready.");
+      }
+      const next = new URLSearchParams(searchParams);
+      next.delete("purchase");
+      next.delete("session_id");
+      setSearchParams(next, { replace: true });
+    };
+
+    finish();
+  }, [searchParams, setSearchParams, userEmail]);
+
+  const requestView = (view) => {
+    const lockedViews = ["assessmentUser", "reports", "actionPlan"];
+    if (hasAssessmentAccess === false && !isAdminMode && lockedViews.includes(view)) {
+      setShowWelcomePurchase(true);
+      return;
+    }
+    setActiveView(view);
+  };
 
   // Logout function with redirection to login page
   const handleLogout = async (e) => {
@@ -117,19 +177,31 @@ export default function DarkSidebarWithSideContentLeft() {
 
   const clientView =
     activeView === "assessmentUser" ? (
-      <AssessmentUser setActiveView={setActiveView} />
+      <AssessmentUser
+        setActiveView={requestView}
+        hasAssessmentAccess={hasAssessmentAccess}
+        onRequestPurchase={() => setShowWelcomePurchase(true)}
+      />
     ) : activeView === "reports" ? (
-      <Reports setActiveView={setActiveView} />
+      <Reports setActiveView={requestView} />
     ) : activeView === "actionPlan" ? (
-      <ActionPlan setActiveView={setActiveView} />
+      <ActionPlan setActiveView={requestView} />
     ) : activeView === "resources" ? (
-      <Resources />
+      <Resources
+        hasAssessmentAccess={hasAssessmentAccess}
+        onRequestPurchase={() => setShowWelcomePurchase(true)}
+      />
     ) : activeView === "bugReport" ? (
       <BugReportPage />
     ) : activeView === "onboarding" ? (
-      <OnboardingPage setActiveView={setActiveView} firstName={firstName} lastName={lastName} />
+      <OnboardingPage setActiveView={requestView} firstName={firstName} lastName={lastName} />
     ) : (
-      <Dashboard setActiveView={setActiveView} viewMode="client" />
+      <Dashboard
+        setActiveView={requestView}
+        viewMode="client"
+        hasAssessmentAccess={hasAssessmentAccess}
+        onRequestPurchase={() => setShowWelcomePurchase(true)}
+      />
     );
 
   if (effectiveViewMode === "client") {
@@ -137,12 +209,13 @@ export default function DarkSidebarWithSideContentLeft() {
       <>
         <ClientWorkspace
           activeView={activeView}
-          setActiveView={setActiveView}
+          setActiveView={requestView}
           firstName={firstName}
           lastName={lastName}
           onLogout={handleLogout}
           onFeedback={() => setFeedbackModalOpen(true)}
           canSwitchAdmin={canSwitchAdmin}
+          hasAssessmentAccess={hasAssessmentAccess}
           onSwitchAdmin={
             canSwitchAdmin
               ? () => {
@@ -169,6 +242,20 @@ export default function DarkSidebarWithSideContentLeft() {
           )}
         </ClientWorkspace>
         <FeedbackModal isOpen={feedbackModalOpen} onClose={() => setFeedbackModalOpen(false)} />
+        <WelcomePurchaseModal
+          open={hasAssessmentAccess === false && showWelcomePurchase}
+          firstName={firstName}
+          onClose={() => setShowWelcomePurchase(false)}
+          onBrowseResources={() => {
+            setShowWelcomePurchase(false);
+            setActiveView("resources");
+          }}
+          onPurchased={() => {
+            setHasAssessmentAccess(true);
+            setShowWelcomePurchase(false);
+            setActiveView("assessmentUser");
+          }}
+        />
       </>
     );
   }

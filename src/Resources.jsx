@@ -3,7 +3,7 @@ import { getAuth } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "./firebaseConfig";
 import { processComputedScores } from "./utils/analytics";
-import { getCategoryReport } from "./utils/reportContent";
+import { getCategoryReport, getFreeLibraryResources } from "./utils/reportContent";
 import { getResourceCoverImage } from "./utils/resourceImages";
 
 const FILTERS = [
@@ -56,7 +56,7 @@ const CATEGORY_PILL = {
   general: { label: "Overall Health", cls: "info" },
 };
 
-export default function Resources() {
+export default function Resources({ hasAssessmentAccess = true, onRequestPurchase }) {
   const [enhancedScores, setEnhancedScores] = useState(null);
   const [queryText, setQueryText] = useState("");
   const [filter, setFilter] = useState("all");
@@ -92,6 +92,19 @@ export default function Resources() {
   }, [enhancedScores]);
 
   const cards = useMemo(() => {
+    const library = getFreeLibraryResources().map((resource) => ({
+      title: resource.title,
+      description: resource.description || "",
+      pill: CATEGORY_PILL[resource.category]?.label || resource.type || "Resource",
+      pillClass: CATEGORY_PILL[resource.category]?.cls || "info",
+      category: resource.category || "general",
+      type: resource.type || "",
+      image: resource.image || "",
+      href: resource.url || null,
+      cta: resource.type === "video" ? "Watch" : resource.type === "program" ? "Open course" : "Read / download",
+      primary: true,
+      free: true,
+    }));
     const fromScores = recommended.map((resource) => ({
       title: resource.title,
       description: resource.description || "",
@@ -104,8 +117,11 @@ export default function Resources() {
       cta: resource.url ? "Open" : "View Resource",
       primary: Boolean(resource.url),
     }));
-    const merged = [...PINNED];
+    const merged = [...library];
     fromScores.forEach((card) => {
+      if (!merged.some((item) => item.title === card.title)) merged.push(card);
+    });
+    PINNED.forEach((card) => {
       if (!merged.some((item) => item.title === card.title)) merged.push(card);
     });
     return merged.filter((card) => {
@@ -121,11 +137,22 @@ export default function Resources() {
       <div className="page-head">
         <div>
           <h1>Help Center</h1>
-          <p>Recommended guides, worksheets, videos, MarketAtomy Academy resources, and consultation options based on your assessment.</p>
+          <p>
+            {hasAssessmentAccess === false
+              ? "Free guides, worksheets, videos, and Academy resources you can use now. The assessment, report, and action plan stay locked until you purchase."
+              : "Recommended guides, worksheets, videos, MarketAtomy Academy resources, and consultation options based on your assessment."}
+          </p>
         </div>
-        <a className="btn btn-secondary" href="https://marketatomy.academy" target="_blank" rel="noreferrer">
-          Open MarketAtomy Academy
-        </a>
+        <div style={{ display: "flex", gap: 9, flexWrap: "wrap" }}>
+          {hasAssessmentAccess === false ? (
+            <button type="button" className="btn btn-primary" onClick={onRequestPurchase}>
+              Unlock assessment — $297
+            </button>
+          ) : null}
+          <a className="btn btn-secondary" href="https://marketatomy.academy" target="_blank" rel="noreferrer">
+            Open MarketAtomy Academy
+          </a>
+        </div>
       </div>
 
       <section className="panel" style={{ marginBottom: 20 }}>

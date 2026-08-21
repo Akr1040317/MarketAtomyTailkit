@@ -337,6 +337,68 @@
       font-size: 22px;
     }
 
+    .ma-landing .hero-buy{
+      margin-top: 26px;
+      max-width: 560px;
+      padding: 20px 20px 18px;
+      border-radius: 20px;
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.10);
+    }
+
+    .ma-landing .hero-buy-price{
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .ma-landing .hero-buy-price strong{
+      font-family: Manrope, sans-serif;
+      font-size: 40px;
+      line-height: 1;
+      color: #fff;
+    }
+
+    .ma-landing .hero-buy-price span{
+      color: #9aa8ba;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .ma-landing .hero-buy ul{
+      margin: 0 0 4px;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 7px;
+      color: #d7e1ee;
+      font-size: 14px;
+    }
+
+    .ma-landing .hero-buy li{
+      padding-left: 22px;
+      position: relative;
+    }
+
+    .ma-landing .hero-buy li::before{
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: #12c9e8;
+      font-weight: 800;
+    }
+
+    .ma-landing .hero-buy .hero-actions{
+      margin-top: 16px;
+    }
+
+    .ma-landing .hero-buy-note{
+      margin: 12px 0 0;
+      color: #748297;
+      font-size: 12px;
+    }
+
     .ma-landing .hero-actions{
       display: flex;
       gap: 12px;
@@ -1045,6 +1107,14 @@
       color: #687488;
     }
 
+    .ma-landing .footer-credit{
+      margin-top: 16px;
+      text-align: center;
+      color: #4e5a6c;
+      font-size: 10px;
+      letter-spacing: .02em;
+    }
+
     @media (max-width: 980px) {
       .ma-landing .nav-links{
         display: none;
@@ -1177,9 +1247,9 @@
 }
 
 .ma-landing .logo img {
-  background: #fff;
-  border-radius: 8px;
-  padding: 6px 10px;
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
 }
 
 .ma-landing .about-logo,

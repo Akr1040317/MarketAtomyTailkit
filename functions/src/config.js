@@ -1,4 +1,4 @@
-const { defineInt, defineString } = require("firebase-functions/params");
+const { defineInt, defineSecret, defineString } = require("firebase-functions/params");
 
 // Where emails should link users back into the app.
 // Set with: firebase functions:config:set app.base_url="https://your-domain"
@@ -25,6 +25,9 @@ const REMINDER_INTERVAL_DAYS = defineInt("REMINDER_INTERVAL_DAYS", {
 });
 const MAX_REMINDERS = defineInt("MAX_REMINDERS", { default: 5 });
 
+const STRIPE_SECRET_KEY = defineSecret("STRIPE_SECRET_KEY");
+const STRIPE_WEBHOOK_SECRET = defineSecret("STRIPE_WEBHOOK_SECRET");
+
 module.exports = {
   APP_BASE_URL,
   SUPPORT_EMAIL,
@@ -32,5 +35,7 @@ module.exports = {
   FIRST_REMINDER_AFTER_DAYS,
   REMINDER_INTERVAL_DAYS,
   MAX_REMINDERS,
+  STRIPE_SECRET_KEY,
+  STRIPE_WEBHOOK_SECRET,
 };
 

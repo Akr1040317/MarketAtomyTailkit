@@ -31,7 +31,7 @@ export default function AboutPage() {
                 MarketAtomy helps small and medium business owners step outside the daily demands of running a company and gain the clarity needed to plan, prioritize, and grow with greater intention.
               </p>
               <div className="hero-actions">
-                <Link className="btn btn-primary" to="/signup">Take the Business Health Check</Link>
+                <Link className="btn btn-primary" to="/signup">Take the Business Health Check — $297</Link>
                 <a className="btn btn-outline" href="https://www.marketatomy.com/" target="_blank" rel="noopener noreferrer">
                   Visit MarketAtomy.com
                 </a>

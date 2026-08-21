@@ -1,0 +1,234 @@
+.welcome-purchase {
+  position: relative;
+  z-index: 200000;
+}
+
+.welcome-purchase-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 14, 26, 0.72);
+  backdrop-filter: blur(8px);
+}
+
+.welcome-purchase-frame {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.welcome-purchase-panel {
+  width: min(640px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow: auto;
+  border-radius: 24px;
+  padding: 28px 28px 22px;
+  color: #f8fafc;
+  background:
+    radial-gradient(circle at 88% 0%, rgba(22, 158, 231, 0.16), transparent 34%),
+    radial-gradient(circle at 8% 100%, rgba(253, 187, 19, 0.12), transparent 32%),
+    #111827;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
+}
+
+.welcome-purchase-top,
+.welcome-purchase-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.welcome-purchase-kicker,
+.welcome-purchase-count {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #fdbb13;
+}
+
+.welcome-purchase-count {
+  color: #9aa8ba;
+}
+
+.welcome-purchase-slider {
+  min-height: 280px;
+  margin: 18px 0 8px;
+}
+
+.welcome-purchase-title {
+  margin: 0;
+  font-family: Manrope, sans-serif;
+  font-size: clamp(1.6rem, 3vw, 2.05rem);
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.welcome-purchase-body {
+  margin: 12px 0 18px;
+  color: #c5d0de;
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.welcome-purchase-points {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 10px;
+}
+
+.welcome-purchase-points li {
+  position: relative;
+  padding-left: 22px;
+  color: #e8eef6;
+  font-size: 14px;
+}
+
+.welcome-purchase-points li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: #12c9e8;
+  font-weight: 800;
+}
+
+.welcome-purchase-buy {
+  margin-top: 22px;
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.welcome-purchase-price {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.welcome-purchase-price strong {
+  font-family: Manrope, sans-serif;
+  font-size: 2rem;
+  font-weight: 800;
+}
+
+.welcome-purchase-price span,
+.welcome-purchase-promo {
+  color: #9aa8ba;
+  font-size: 13px;
+}
+
+.welcome-purchase-promo {
+  display: grid;
+  gap: 8px;
+  font-weight: 700;
+}
+
+.welcome-purchase-promo div {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.welcome-purchase-promo input,
+.welcome-purchase-promo button,
+.welcome-purchase-primary,
+.welcome-purchase-secondary {
+  font: inherit;
+  border-radius: 12px;
+}
+
+.welcome-purchase-promo input {
+  min-height: 44px;
+  padding: 0 12px;
+  color: #f8fafc;
+  background: #0c1321;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.welcome-purchase-promo button {
+  padding: 0 16px;
+  font-weight: 800;
+  color: #0c1321;
+  background: #fdbb13;
+  border: 0;
+  cursor: pointer;
+}
+
+.welcome-purchase-promo em {
+  font-style: normal;
+  color: #ff8a80;
+}
+
+.welcome-purchase-promo em.ok {
+  color: #20c997;
+}
+
+.welcome-purchase-dots {
+  display: flex;
+  gap: 7px;
+  margin: 8px 0 18px;
+}
+
+.welcome-purchase-dots button {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.18);
+  cursor: pointer;
+}
+
+.welcome-purchase-dots button.active {
+  width: 26px;
+  background: #169ee7;
+}
+
+.welcome-purchase-actions {
+  padding-top: 8px;
+}
+
+.welcome-purchase-primary,
+.welcome-purchase-secondary {
+  min-height: 46px;
+  padding: 0 18px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.welcome-purchase-primary {
+  color: #fff;
+  background: linear-gradient(90deg, #f26522, #f5c400);
+  border: 0;
+}
+
+.welcome-purchase-secondary {
+  color: #d7e1ee;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.welcome-purchase-primary:disabled,
+.welcome-purchase-secondary:disabled,
+.welcome-purchase-promo button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .welcome-purchase-panel { padding: 22px 18px 18px; }
+  .welcome-purchase-slider { min-height: 0; }
+  .welcome-purchase-actions,
+  .welcome-purchase-promo div {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+  .welcome-purchase-actions { justify-content: stretch; }
+}

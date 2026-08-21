@@ -566,6 +566,21 @@ function mergeResources(baseResources = [], overrideResources = []) {
   return Array.from(merged.values());
 }
 
+export function getFreeLibraryResources() {
+  const seen = new Set();
+  const items = [];
+  Object.entries(RESOURCE_OVERRIDES).forEach(([category, list]) => {
+    (list || []).forEach((resource) => {
+      const type = String(resource.type || "").toLowerCase();
+      if (type === "session" || type === "consultation") return;
+      if (!resource?.title || !resource.url || seen.has(resource.title)) return;
+      seen.add(resource.title);
+      items.push({ ...resource, category });
+    });
+  });
+  return items;
+}
+
 /**
  * Get report content for a category and health level
  * @param {string} categoryKey - Category key

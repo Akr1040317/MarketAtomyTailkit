@@ -87,7 +87,7 @@ function PublicNav({ onHome, onLogin, onSignup, current }) {
               <button type="button" className="nav-login" onClick={onLogin}>Login</button>
             )}
             {current !== "signup" && (
-              <button type="button" className="btn btn-primary" onClick={onSignup}>Get Started</button>
+              <button type="button" className="btn btn-primary" onClick={onSignup}>Buy — $297</button>
             )}
             <button
               type="button"
@@ -105,7 +105,7 @@ function PublicNav({ onHome, onLogin, onSignup, current }) {
         <Link to="/assessment" onClick={() => setMenuOpen(false)}>Assessment</Link>
         <Link to="/about" onClick={() => setMenuOpen(false)}>About</Link>
         <button type="button" onClick={() => { setMenuOpen(false); onLogin(); }}>Login</button>
-        <button type="button" onClick={() => { setMenuOpen(false); onSignup(); }}>Get Started</button>
+        <button type="button" onClick={() => { setMenuOpen(false); onSignup(); }}>Buy — $297</button>
       </div>
     </Reveal>
   );
@@ -139,6 +139,7 @@ function PublicFooter({ onLogin, onSignup }) {
           <span>© {new Date().getFullYear()} MarketAtomy. All rights reserved.</span>
           <span>We value your email privacy and never send SPAM.</span>
         </div>
+        <div className="footer-credit">Developed by Akshat Rastogi, thank you</div>
       </div>
     </footer>
   );
@@ -155,24 +156,31 @@ export default function MarketingLanding({ onLogin, onSignup, onHome }) {
             <Reveal mode="mount" direction="left">
               <div className="hero-badge">
                 <span>✓</span>
-                Business clarity starts here
+                One-time Business Health Check — $297
               </div>
               <h1>
                 <span className="gradient-text">Business Health Check</span>
                 <span className="white">Assessment</span>
               </h1>
               <p className="hero-copy">
-                Evaluate your business across 20 critical performance areas and identify the gaps, risks, and opportunities that matter most for sustainable growth.
+                Create an account to purchase the assessment, then evaluate your business across 20 critical performance areas and see where hidden gaps could interfere with growth.
               </p>
-              <div className="price-line">
-                For just <strong>$297</strong>, see where your business is strong and where hidden gaps could interfere with growth.
-              </div>
-              <div className="hero-actions">
-                <button type="button" className="btn btn-primary" onClick={onSignup}>
-                  Start Assessment — $297
-                  <span>→</span>
-                </button>
-                <button type="button" className="btn btn-secondary" onClick={onLogin}>Sign In</button>
+              <div className="hero-buy">
+                <div className="hero-buy-price">
+                  <strong>$297</strong>
+                  <span>one-time · not a subscription</span>
+                </div>
+                <ul>
+                  <li>Full 20-area diagnostic</li>
+                  <li>Scored report and next-step roadmap</li>
+                  <li>Help Center resources included</li>
+                </ul>
+                <div className="hero-actions">
+                  <button type="button" className="btn btn-primary" onClick={onSignup}>
+                    Buy the Assessment — $297
+                    <span>→</span>
+                  </button>
+                </div>
               </div>
               <div className="privacy">
                 <span className="privacy-dot">✓</span>
@@ -323,10 +331,10 @@ export default function MarketingLanding({ onLogin, onSignup, onHome }) {
                   </Item>
                 ))}
               </Stagger>
-              <button type="button" className="btn btn-blue" style={{ marginTop: 30 }} onClick={onSignup}>
-                Start Your Assessment
-                <span>→</span>
-              </button>
+                <button type="button" className="btn btn-blue" style={{ marginTop: 30 }} onClick={onSignup}>
+                  Create account to buy — $297
+                  <span>→</span>
+                </button>
             </Reveal>
           </div>
         </section>
@@ -340,7 +348,7 @@ export default function MarketingLanding({ onLogin, onSignup, onHome }) {
                 MarketAtomy's Business Health Check gives you the perspective of an external expert by examining how your operations, finances, market, product, and leadership systems influence each other.
               </p>
               <p>
-                Instead of reacting only to the problem in front of you, you can identify the upstream gaps that may be creating friction across the company.
+                Instead of reacting only to the problem in front of you, you can identify the upstream gaps that may be creating friction across the company. The full diagnostic is a one-time $297 assessment.
               </p>
               <div className="quote">
                 “If you don't know what you don't know… how will you know what to focus on fixing?”
@@ -411,7 +419,7 @@ export default function MarketingLanding({ onLogin, onSignup, onHome }) {
                   one-time assessment
                 </div>
                 <button type="button" className="btn btn-primary" onClick={onSignup}>
-                  Start Assessment
+                  Buy the Assessment
                   <span>→</span>
                 </button>
                 <button type="button" className="cta-login" onClick={onLogin}>
@@ -449,6 +457,7 @@ export default function MarketingLanding({ onLogin, onSignup, onHome }) {
             <span>© {new Date().getFullYear()} MarketAtomy. All rights reserved.</span>
             <span>We value your email privacy and never send SPAM.</span>
           </div>
+          <div className="footer-credit">Developed by Akshat Rastogi, thank you</div>
         </div>
       </Reveal>
     </div>

@@ -25,6 +25,7 @@ export default function ClientWorkspace({
   onFeedback,
   canSwitchAdmin,
   onSwitchAdmin,
+  hasAssessmentAccess = true,
   children,
 }) {
   const [completion, setCompletion] = useState(null);
@@ -55,7 +56,11 @@ export default function ClientWorkspace({
 
   const navItems = CLIENT_NAV.map((item) => ({
     ...item,
-    badge: item.badgeKey === "progress" && completion ? `${completion.percent}%` : undefined,
+    locked: hasAssessmentAccess === false && ["assessmentUser", "reports", "actionPlan"].includes(item.id),
+    badge:
+      item.badgeKey === "progress" && completion && hasAssessmentAccess !== false
+        ? `${completion.percent}%`
+        : undefined,
   }));
 
   const menuActions = [
@@ -78,7 +83,13 @@ export default function ClientWorkspace({
         firstName={firstName}
         lastName={lastName}
         profileRole="Client workspace"
-        profileMeta={completion ? `${completion.percent}% complete` : null}
+        profileMeta={
+          hasAssessmentAccess === false
+            ? "Help Center open"
+            : completion
+              ? `${completion.percent}% complete`
+              : null
+        }
         onStartWalkthrough={() => setTourOpen(true)}
         walkthroughLabel="Guided walkthrough"
         menuActions={menuActions}

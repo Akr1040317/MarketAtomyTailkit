@@ -67,7 +67,7 @@ function clearDraft(uid, sectionId) {
   localStorage.setItem(`bhcDraft:${uid}`, JSON.stringify(all));
 }
 
-export default function AssessmentUser({ setActiveView }) {
+export default function AssessmentUser({ setActiveView, hasAssessmentAccess = true, onRequestPurchase }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [sections, setSections] = useState([]);
   const [selectedSection, setSelectedSection] = useState(null);
@@ -770,6 +770,30 @@ export default function AssessmentUser({ setActiveView }) {
                 </div>
           </div>
         </form>
+      </div>
+    );
+  }
+
+  if (hasAssessmentAccess === false) {
+    return (
+      <div className="page">
+        <div className="page-head">
+          <div>
+            <h1>Business Health Check Assessment</h1>
+            <p>Unlock the full assessment with a one-time $297 purchase, or apply a promo code to begin.</p>
+          </div>
+        </div>
+        <section className="panel">
+          <div className="panel-body" style={{ padding: 32 }}>
+            <h2 style={{ fontFamily: "Manrope, sans-serif", margin: "0 0 8px" }}>Purchase required</h2>
+            <p className="muted" style={{ maxWidth: 640 }}>
+              After you complete checkout, you can work through the assessment section by section and generate your report.
+            </p>
+            <button type="button" className="btn btn-primary" style={{ marginTop: 18 }} onClick={onRequestPurchase}>
+              Purchase and begin — $297
+            </button>
+          </div>
+        </section>
       </div>
     );
   }

@@ -153,7 +153,7 @@ export default function AssessmentPage() {
               </div>
               <div className="cta-side">
                 <div className="cta-price"><strong>$297</strong>Business Health Check</div>
-                <Link className="btn btn-primary" to="/signup">Get Started</Link>
+                <Link className="btn btn-primary" to="/signup">Get Started — $297</Link>
               </div>
             </Reveal>
           </div>

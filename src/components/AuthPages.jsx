@@ -1,7 +1,15 @@
+import { useState } from "react";
+import { Link } from "react-router-dom";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import companyLogo from "../assets/MarketAtomy-HOR-300x92.png";
 import { Reveal } from "./Reveal";
 import "../assets/auth-preview.css";
+
+const NAV = [
+  { to: "/features", label: "Features" },
+  { to: "/assessment", label: "Assessment" },
+  { to: "/about", label: "About" },
+];
 
 function GoogleIcon() {
   return (
@@ -14,11 +22,13 @@ function GoogleIcon() {
   );
 }
 
-function AuthChrome({ variant, onHome, children }) {
+function AuthChrome({ variant, current, onHome, children }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+
   return (
     <div className={`ma-auth ${variant}`}>
       <div className="page">
-        <header>
+        <header className="nav-wrap">
           <div className="container">
             <nav>
               <a
@@ -26,23 +36,44 @@ function AuthChrome({ variant, onHome, children }) {
                 href="/"
                 onClick={(e) => {
                   e.preventDefault();
+                  setMenuOpen(false);
                   onHome();
                 }}
               >
                 <img src={companyLogo} alt="MarketAtomy logo" />
               </a>
-              <a
-                className="back-link"
-                href="/"
-                onClick={(e) => {
-                  e.preventDefault();
-                  onHome();
-                }}
-              >
-                <span>←</span>
-                <span>Back to Business Health Check</span>
-              </a>
+              <div className="nav-links">
+                {NAV.map((item) => (
+                  <Link key={item.to} to={item.to}>{item.label}</Link>
+                ))}
+              </div>
+              <div className="nav-actions">
+                {current !== "login" && (
+                  <Link className="nav-login" to="/login">Login</Link>
+                )}
+                {current !== "signup" && (
+                  <Link className="btn btn-primary" to="/signup">Get Started</Link>
+                )}
+                <button
+                  type="button"
+                  className="nav-menu-btn"
+                  aria-label="Open menu"
+                  onClick={() => setMenuOpen((open) => !open)}
+                >
+                  {menuOpen ? "✕" : "☰"}
+                </button>
+              </div>
             </nav>
+          </div>
+          <div className={`mobile-links${menuOpen ? " open" : ""}`}>
+            {NAV.map((item) => (
+              <Link key={item.to} to={item.to} onClick={() => setMenuOpen(false)}>
+                {item.label}
+              </Link>
+            ))}
+            <Link to="/login" onClick={() => setMenuOpen(false)}>Login</Link>
+            <Link to="/signup" onClick={() => setMenuOpen(false)}>Get Started</Link>
+            <Link to="/" onClick={() => { setMenuOpen(false); onHome(); }}>Home</Link>
           </div>
         </header>
         <main>
@@ -50,7 +81,35 @@ function AuthChrome({ variant, onHome, children }) {
             <div className="auth-layout">{children}</div>
           </div>
         </main>
-        <footer>© {new Date().getFullYear()} MarketAtomy. All rights reserved.</footer>
+        <footer>
+          <div className="container">
+            <div className="footer-grid">
+              <div>
+                <img className="footer-logo" src={companyLogo} alt="MarketAtomy" />
+                <div className="footer-copy">
+                  Helping business owners gain clarity, identify gaps, and build stronger foundations for sustainable growth.
+                </div>
+              </div>
+              <div className="footer-col">
+                <strong>Explore</strong>
+                <Link to="/features">Features</Link>
+                <Link to="/assessment">Assessment</Link>
+                <Link to="/about">About</Link>
+              </div>
+              <div className="footer-col">
+                <strong>Account</strong>
+                <Link to="/login">Login</Link>
+                <Link to="/signup">Sign Up</Link>
+                <a href="https://www.marketatomy.com/" target="_blank" rel="noopener noreferrer">MarketAtomy.com</a>
+              </div>
+            </div>
+            <div className="footer-bottom">
+              <span>© {new Date().getFullYear()} MarketAtomy LLC. All rights reserved.</span>
+              <span>Privacy Policy</span>
+            </div>
+            <div className="footer-credit">Developed by Akshat Rastogi, thank you</div>
+          </div>
+        </footer>
       </div>
     </div>
   );
@@ -71,7 +130,7 @@ export function LoginView({
   onSignup,
 }) {
   return (
-    <AuthChrome variant="ma-auth-login" onHome={onHome}>
+    <AuthChrome variant="ma-auth-login" current="login" onHome={onHome}>
       <Reveal as="section" className="intro" mode="mount" direction="left">
         <div className="eyebrow">Business Health Check</div>
         <h1>
@@ -199,37 +258,37 @@ export function SignupView({
   onLogin,
 }) {
   return (
-    <AuthChrome variant="ma-auth-signup" onHome={onHome}>
+    <AuthChrome variant="ma-auth-signup" current="signup" onHome={onHome}>
       <Reveal as="section" className="intro" mode="mount" direction="left">
         <div className="eyebrow">Business Health Check</div>
         <h1>
-          Build a clearer picture of
+          Create your account to
           <br />
-          <span className="gradient-text">your business.</span>
+          <span className="gradient-text">buy the assessment.</span>
         </h1>
         <p>
-          Create your MarketAtomy account to begin your Business Health Check and uncover the areas that deserve your attention most.
+          Sign up first. After your account is created, you can purchase the one-time $297 Business Health Check and begin.
         </p>
         <div className="steps">
           <div className="step">
             <div className="step-num">01</div>
             <div>
               <strong>Create your account</strong>
-              <span>Secure your assessment progress and results.</span>
+              <span>This keeps your purchase, progress, and report tied to you.</span>
             </div>
           </div>
           <div className="step">
             <div className="step-num">02</div>
             <div>
-              <strong>Complete the assessment</strong>
-              <span>Evaluate 20 critical areas across your business.</span>
+              <strong>Purchase the assessment</strong>
+              <span>One-time $297 fee, or apply a promo code if you have one.</span>
             </div>
           </div>
           <div className="step">
             <div className="step-num">03</div>
             <div>
-              <strong>Get your growth roadmap</strong>
-              <span>See strengths, priority gaps, and recommended next steps.</span>
+              <strong>Complete it and get next steps</strong>
+              <span>Your scores, report, and action plan unlock after purchase.</span>
             </div>
           </div>
         </div>
@@ -237,7 +296,7 @@ export function SignupView({
 
       <Reveal as="section" className="auth-card" mode="mount" direction="right" delay={0.12}>
         <h2>Create Your Account</h2>
-        <p className="auth-subtitle">Sign up to begin your Business Health Check</p>
+        <p className="auth-subtitle">Create an account to purchase the $297 Business Health Check</p>
 
         <form onSubmit={onSubmit}>
           <div className="name-grid">
@@ -369,7 +428,7 @@ export function SignupView({
           {error && <div className="auth-alert error">{error}</div>}
           {success && <div className="auth-alert success">Account created! Redirecting...</div>}
 
-          <button className="submit" type="submit">Create Account</button>
+          <button className="submit" type="submit">Create Account &amp; Continue to Purchase</button>
         </form>
 
         <div className="divider">or</div>

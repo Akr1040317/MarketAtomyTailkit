@@ -9,7 +9,12 @@
   background: none;
 }
 
-.ma-site .logo img,
+.ma-site .logo img {
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+}
+
 .ma-site .footer-logo,
 .ma-site .hero-card img {
   background: #fff;
@@ -213,6 +218,7 @@
 .ma-site .footer-col strong{display:block;font-size:12px;margin-bottom:13px}
 .ma-site .footer-col a{display:block;color:#7f8b9d;font-size:12px;margin:8px 0}
 .ma-site .footer-bottom{display:flex;justify-content:space-between;gap:20px;margin-top:31px;padding-top:21px;border-top:1px solid rgba(255,255,255,.06);color:#5f6b7e;font-size:10px}
+.ma-site .footer-credit{margin-top:16px;text-align:center;color:#4e5a6c;font-size:10px;letter-spacing:.02em}
 @media(max-width:930px){
   .ma-site .nav-links{display:none}
   .ma-site .hero-grid, .ma-site .content-grid{grid-template-columns:1fr}

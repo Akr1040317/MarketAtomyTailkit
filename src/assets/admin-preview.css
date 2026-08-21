@@ -90,9 +90,9 @@
 .ma-admin .brand img {
   width: 158px;
   display: block;
-  background: #fff;
-  border-radius: 8px;
-  padding: 6px 8px;
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
 }
 
 .ma-admin .top-nav {

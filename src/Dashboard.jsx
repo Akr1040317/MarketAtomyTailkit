@@ -3,7 +3,7 @@ import { getAuth } from "firebase/auth";
 import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
 import { db } from "./firebaseConfig";
 import { getHealthLevelLabel, processComputedScores } from "./utils/analytics";
-import { generateActionItems, getRecommendedResources } from "./utils/reportContent";
+import { generateActionItems, getFreeLibraryResources, getRecommendedResources } from "./utils/reportContent";
 
 const CATEGORIES = {
   foundationalStructure: "Foundational Structure",
@@ -21,7 +21,7 @@ function greeting(firstName) {
   return `${hello}, ${firstName || "there"}.`;
 }
 
-export default function Dashboard({ setActiveView }) {
+export default function Dashboard({ setActiveView, hasAssessmentAccess = true, onRequestPurchase }) {
   const [firstName, setFirstName] = useState("");
   const [enhancedScores, setEnhancedScores] = useState(null);
   const [completedSections, setCompletedSections] = useState([]);
@@ -55,53 +55,85 @@ export default function Dashboard({ setActiveView }) {
     load();
   }, [user]);
 
+  const unpaid = hasAssessmentAccess === false;
   const analyticsFor = (key) =>
     key === "general" ? enhancedScores?.overallHealth || enhancedScores?.general : enhancedScores?.[key];
 
   const percent = totalSections > 0 ? Math.round((completedSections.length / totalSections) * 100) : 0;
   const complete = totalSections > 0 && completedSections.length === totalSections;
   const actionItems = enhancedScores ? generateActionItems(enhancedScores) : [];
-  const resources = enhancedScores ? getRecommendedResources(enhancedScores).slice(0, 2) : [];
+  const resources = unpaid
+    ? getFreeLibraryResources().slice(0, 3)
+    : enhancedScores
+      ? getRecommendedResources(enhancedScores).slice(0, 2)
+      : [];
   const remaining = Math.max(totalSections - completedSections.length, 0);
 
-  const nextSteps = [];
-  if (!complete) {
-    nextSteps.push({
-      title: remaining === 1 ? "Finish the last assessment section" : `Finish remaining ${remaining} assessment sections`,
-      body: "Continue building your baseline so scores and recommendations become more complete.",
-      view: "assessmentUser",
+  const nextSteps = unpaid
+    ? [
+        {
+          title: "Browse free Help Center resources",
+          body: "Read guides, worksheets, and videos while the assessment stays locked.",
+          view: "resources",
+        },
+        {
+          title: "Unlock the Business Health Check",
+          body: "Purchase the one-time $297 assessment when you are ready to begin.",
+          view: "purchase",
+        },
+      ]
+    : [];
+  if (!unpaid) {
+    if (!complete) {
+      nextSteps.push({
+        title: remaining === 1 ? "Finish the last assessment section" : `Finish remaining ${remaining} assessment sections`,
+        body: "Continue building your baseline so scores and recommendations become more complete.",
+        view: "assessmentUser",
+      });
+    }
+    actionItems.slice(0, 2).forEach((item) => {
+      nextSteps.push({
+        title: `Focus on ${CATEGORIES[item.category] || item.category}`,
+        body: "This is currently one of your lowest health areas.",
+        view: "actionPlan",
+      });
     });
-  }
-  actionItems.slice(0, 2).forEach((item) => {
-    nextSteps.push({
-      title: `Focus on ${CATEGORIES[item.category] || item.category}`,
-      body: "This is currently one of your lowest health areas.",
-      view: "actionPlan",
-    });
-  });
-  if (nextSteps.length < 3) {
-    nextSteps.push({
-      title: "Review your Action Plan",
-      body: "Turn current findings into prioritized follow-up work.",
-      view: "actionPlan",
-    });
+    if (nextSteps.length < 3) {
+      nextSteps.push({
+        title: "Review your Action Plan",
+        body: "Turn current findings into prioritized follow-up work.",
+        view: "actionPlan",
+      });
+    }
   }
 
-  const checklist = [
-    { label: "Create account", done: true },
-    { label: "Complete intake", done: Boolean(firstName) },
-    { label: "Finish assessment", done: complete, current: !complete },
-    { label: "Read report", done: false, current: complete },
-    { label: "Review action plan", done: false },
-    { label: "Download a resource", done: false },
-  ];
+  const checklist = unpaid
+    ? [
+        { label: "Create account", done: true },
+        { label: "Browse free resources", done: false, current: true },
+        { label: "Purchase assessment", done: false },
+        { label: "Finish assessment", done: false },
+        { label: "Read report", done: false },
+      ]
+    : [
+        { label: "Create account", done: true },
+        { label: "Complete intake", done: Boolean(firstName) },
+        { label: "Finish assessment", done: complete, current: !complete },
+        { label: "Read report", done: false, current: complete },
+        { label: "Review action plan", done: false },
+        { label: "Download a resource", done: false },
+      ];
 
   return (
     <div className="page">
       <div className="page-head">
         <div>
           <h1>{greeting(firstName)}</h1>
-          <p>Your business health snapshot, current assessment progress, and next recommended actions.</p>
+          <p>
+            {unpaid
+              ? "Your assessment is locked until you purchase. You can still read free Help Center resources anytime."
+              : "Your business health snapshot, current assessment progress, and next recommended actions."}
+          </p>
         </div>
         <span className="meta-soft">
           {lastUpdated
@@ -112,34 +144,54 @@ export default function Dashboard({ setActiveView }) {
                 hour: "numeric",
                 minute: "2-digit",
               })}`
-            : "Complete a section to start your baseline"}
+            : unpaid
+              ? "Assessment locked · Help Center is open"
+              : "Complete a section to start your baseline"}
         </span>
       </div>
 
       <section className="panel hero-panel">
         <div className="panel-body" style={{ padding: "25px 26px" }}>
           <span className="pill" style={{ background: "rgba(245,196,0,.12)", color: "#F5D33E" }}>
-            {complete ? "Assessment complete" : "Assessment in progress"}
+            {unpaid ? "Assessment locked" : complete ? "Assessment complete" : "Assessment in progress"}
           </span>
-          <h2>{completedSections.length} of {totalSections || 21} sections complete</h2>
+          <h2>
+            {unpaid
+              ? "Purchase to begin the Business Health Check"
+              : `${completedSections.length} of ${totalSections || 21} sections complete`}
+          </h2>
           <p>
-            {complete
-              ? "Review your scores, open the full report, and use recommended resources to decide what deserves attention next."
-              : "Continue building your baseline. Scores and recommendations become more complete as you finish additional sections."}
+            {unpaid
+              ? "The assessment, report, and action plan stay locked until checkout. Free guides, worksheets, and videos in the Help Center are available now."
+              : complete
+                ? "Review your scores, open the full report, and use recommended resources to decide what deserves attention next."
+                : "Continue building your baseline. Scores and recommendations become more complete as you finish additional sections."}
           </p>
-          <div className="meta-soft" style={{ display: "flex", justifyContent: "space-between", margin: "18px 0 6px" }}>
-            <span>Overall progress</span>
-            <strong style={{ color: "#fff" }}>{percent}%</strong>
-          </div>
-          <div className="progress" style={{ background: "rgba(255,255,255,.08)" }}>
-            <span style={{ width: `${percent}%` }} />
-          </div>
-          <div style={{ display: "flex", gap: 9, marginTop: 18 }}>
-            <button type="button" className="btn btn-primary" onClick={() => setActiveView("assessmentUser")}>
-              {complete ? "Review Assessment" : "Continue Assessment"}
+          {!unpaid ? (
+            <>
+              <div className="meta-soft" style={{ display: "flex", justifyContent: "space-between", margin: "18px 0 6px" }}>
+                <span>Overall progress</span>
+                <strong style={{ color: "#fff" }}>{percent}%</strong>
+              </div>
+              <div className="progress" style={{ background: "rgba(255,255,255,.08)" }}>
+                <span style={{ width: `${percent}%` }} />
+              </div>
+            </>
+          ) : null}
+          <div style={{ display: "flex", gap: 9, marginTop: 18, flexWrap: "wrap" }}>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => (unpaid ? onRequestPurchase?.() : setActiveView("assessmentUser"))}
+            >
+              {unpaid ? "Purchase assessment — $297" : complete ? "Review Assessment" : "Continue Assessment"}
             </button>
-            <button type="button" className="btn btn-secondary" onClick={() => setActiveView("reports")}>
-              View Current Report
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setActiveView(unpaid ? "resources" : "reports")}
+            >
+              {unpaid ? "Browse free resources" : "View Current Report"}
             </button>
           </div>
         </div>
@@ -150,14 +202,23 @@ export default function Dashboard({ setActiveView }) {
           <section className="panel" style={{ marginBottom: 20 }}>
             <div className="panel-head">
               <div>
-                <h2>Your Business Health</h2>
-                <p>Current category results.</p>
+                <h2>{unpaid ? "Locked until purchase" : "Your Business Health"}</h2>
+                <p>{unpaid ? "Scores and the full report appear after you complete the assessment." : "Current category results."}</p>
               </div>
-              <button type="button" className="panel-link" onClick={() => setActiveView("reports")}>
-                Full report →
-              </button>
+              {unpaid ? null : (
+                <button type="button" className="panel-link" onClick={() => setActiveView("reports")}>
+                  Full report →
+                </button>
+              )}
             </div>
             <div className="panel-body">
+              {unpaid ? (
+                <div className="callout">
+                  <strong>Scores are part of the paid assessment</strong>
+                  <br />
+                  Until you purchase, you can still read free Help Center resources and come back to unlock the diagnostic anytime.
+                </div>
+              ) : (
               <div className="grid-3">
                 {Object.keys(CATEGORIES).map((key) => {
                   const analytics = analyticsFor(key);
@@ -175,6 +236,7 @@ export default function Dashboard({ setActiveView }) {
                   );
                 })}
               </div>
+              )}
             </div>
           </section>
 
@@ -182,7 +244,7 @@ export default function Dashboard({ setActiveView }) {
             <div className="panel-head">
               <div>
                 <h2>What to Do Next</h2>
-                <p>Current priorities based on progress and results.</p>
+                <p>{unpaid ? "Use free resources now, or unlock the assessment when you are ready." : "Current priorities based on progress and results."}</p>
               </div>
             </div>
             <div className="panel-body">
@@ -192,7 +254,7 @@ export default function Dashboard({ setActiveView }) {
                   className="callout"
                   key={step.title}
                   style={{ marginTop: index ? 9 : 0, display: "block", width: "100%", textAlign: "left" }}
-                  onClick={() => setActiveView(step.view)}
+                  onClick={() => (step.view === "purchase" ? onRequestPurchase?.() : setActiveView(step.view))}
                 >
                   <strong>{index + 1}. {step.title}</strong>
                   <br />
@@ -223,8 +285,8 @@ export default function Dashboard({ setActiveView }) {
           <section className="panel">
             <div className="panel-head">
               <div>
-                <h2>Recommended for You</h2>
-                <p>Based on your current results.</p>
+                <h2>{unpaid ? "Free to read now" : "Recommended for You"}</h2>
+                <p>{unpaid ? "Guides and worksheets in the Help Center." : "Based on your current results."}</p>
               </div>
             </div>
             <div className="panel-body">
@@ -247,11 +309,11 @@ export default function Dashboard({ setActiveView }) {
                   type="button"
                   className="callout"
                   style={{ display: "block", width: "100%", textAlign: "left" }}
-                  onClick={() => setActiveView("assessmentUser")}
+                  onClick={() => setActiveView("resources")}
                 >
-                  <strong>Complete more of the assessment</strong>
+                  <strong>Browse the Help Center</strong>
                   <br />
-                  Resources appear as your results develop.
+                  Free guides, worksheets, and videos are available without purchasing.
                 </button>
               )}
             </div>
