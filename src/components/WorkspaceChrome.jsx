@@ -44,8 +44,23 @@ function WalkthroughIcon() {
   );
 }
 
+function BellIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M6.2 9.6a5.8 5.8 0 1111.6 0c0 3.2.9 4.6 1.6 5.5.3.4 0 1.1-.5 1.1H5.1c-.5 0-.8-.7-.5-1.1.7-.9 1.6-2.3 1.6-5.5z"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+      />
+      <path d="M9.4 18.2a2.6 2.6 0 005.2 0" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export default function WorkspaceChrome({
   scopeClass,
+  brandName = "MarketAtomy",
   tagline,
   navItems,
   activeView,
@@ -54,6 +69,8 @@ export default function WorkspaceChrome({
   lastName,
   profileRole,
   profileMeta,
+  notifications = [],
+  onNotificationClick,
   menuActions,
   onStartWalkthrough,
   walkthroughLabel = "Guided walkthrough",
@@ -62,11 +79,13 @@ export default function WorkspaceChrome({
   const { theme, toggleTheme } = useTheme();
   const chromeRef = useRef(null);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [inboxOpen, setInboxOpen] = useState(false);
 
   useEffect(() => {
     const onDocClick = (event) => {
       if (chromeRef.current && !chromeRef.current.contains(event.target)) {
         setProfileOpen(false);
+        setInboxOpen(false);
       }
     };
     document.addEventListener("mousedown", onDocClick);
@@ -76,14 +95,18 @@ export default function WorkspaceChrome({
   const initials = `${(firstName || "U").charAt(0)}${(lastName || "").charAt(0)}`.toUpperCase();
   const displayName = firstName ? `${firstName}${lastName ? ` ${lastName}` : ""}` : "User";
 
+  const unreadCount = notifications.filter((item) => item.unread).length;
+
   const go = (view) => {
     onNavigate(view);
     setProfileOpen(false);
+    setInboxOpen(false);
   };
 
   const startWalkthrough = () => {
     onStartWalkthrough?.();
     setProfileOpen(false);
+    setInboxOpen(false);
   };
 
   const isActive = (item) => {
@@ -99,7 +122,7 @@ export default function WorkspaceChrome({
             <button type="button" className="htopnav-logo" onClick={() => go(navItems[0]?.id)}>
               <img src={companyLogo} alt="MarketAtomy" className="htopnav-logo-img" />
               <span className="htopnav-brand">
-                <span className="htopnav-name">MarketAtomy</span>
+                <span className="htopnav-name">{brandName}</span>
                 {tagline ? <span className="htopnav-tag">{tagline}</span> : null}
               </span>
             </button>
@@ -136,6 +159,49 @@ export default function WorkspaceChrome({
 
               {profileMeta ? <span className="htopnav-meta">{profileMeta}</span> : null}
 
+              {notifications.length > 0 ? (
+                <div className="htopnav-inbox-wrap">
+                  <button
+                    type="button"
+                    className="htopnav-walkthrough"
+                    data-tour="chrome-notifications"
+                    aria-label={unreadCount ? `${unreadCount} unread notifications` : "Notifications"}
+                    aria-expanded={inboxOpen}
+                    title="Notifications"
+                    onClick={() => {
+                      setInboxOpen((open) => !open);
+                      setProfileOpen(false);
+                    }}
+                  >
+                    <BellIcon />
+                    {unreadCount > 0 ? <span className="htopnav-inbox-dot">{unreadCount > 9 ? "9+" : unreadCount}</span> : null}
+                  </button>
+                  {inboxOpen ? (
+                    <div className="htopnav-inbox" role="dialog" aria-label="Notifications">
+                      <div className="htopnav-inbox-head">
+                        <strong>Notifications</strong>
+                        <span>{unreadCount ? `${unreadCount} new` : "You're caught up"}</span>
+                      </div>
+                      {notifications.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          className={`htopnav-inbox-item${item.unread ? " unread" : ""}`}
+                          onClick={() => {
+                            onNotificationClick?.(item);
+                            if (item.view) go(item.view);
+                            else setInboxOpen(false);
+                          }}
+                        >
+                          <span className="htopnav-inbox-title">{item.title}</span>
+                          {item.body ? <span className="htopnav-inbox-body">{item.body}</span> : null}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
               <div className="htopnav-profile-wrap">
                 <button
                   type="button"
@@ -143,7 +209,10 @@ export default function WorkspaceChrome({
                   data-tour="chrome-profile"
                   aria-expanded={profileOpen}
                   aria-haspopup="true"
-                  onClick={() => setProfileOpen((open) => !open)}
+                  onClick={() => {
+                    setProfileOpen((open) => !open);
+                    setInboxOpen(false);
+                  }}
                 >
                   <span className="htopnav-av">{initials}</span>
                   <span className="htopnav-uname">{displayName}</span>

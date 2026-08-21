@@ -1,4 +1,4 @@
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Dialog, Transition } from "@headlessui/react";
 import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "./Toast";
@@ -48,8 +48,8 @@ const SLIDES = [
     body: `${ASSESSMENT_PRODUCT_NAME} is a one-time ${ASSESSMENT_PRICE_LABEL} assessment. After checkout, you can start immediately and continue section by section.`,
     points: [
       "One-time fee — not a subscription",
-      "Full assessment, report, and resources included",
-      "Not ready yet? You can still read free Help Center guides without buying",
+      "Full assessment, report, and action plan included",
+      "Help Center guides stay free even if you do not buy today",
     ],
   },
 ];
@@ -60,6 +60,7 @@ export default function WelcomePurchaseModal({
   onClose,
   onPurchased,
   onBrowseResources,
+  startAtPurchase = false,
 }) {
   const [step, setStep] = useState(0);
   const [promoInput, setPromoInput] = useState("");
@@ -70,28 +71,45 @@ export default function WelcomePurchaseModal({
   const last = step === SLIDES.length - 1;
   const free = Boolean(appliedPromo);
 
+  useEffect(() => {
+    if (!open) return;
+    setStep(startAtPurchase ? SLIDES.length - 1 : 0);
+    setBusy(false);
+  }, [open, startAtPurchase]);
+
   const applyPromo = () => {
     if (!isBetaPromoCode(promoInput)) {
       setAppliedPromo("");
       setPromoError("That promo code is not valid.");
-      return;
+      return false;
     }
     setAppliedPromo(BETA_PROMO_CODE);
     setPromoError("");
     toast("Promo applied. The assessment is free.");
+    return true;
   };
 
   const purchase = async () => {
+    const code = appliedPromo || (isBetaPromoCode(promoInput) ? BETA_PROMO_CODE : "");
+    if (promoInput.trim() && !code) {
+      setPromoError("That promo code is not valid.");
+      return;
+    }
+    if (promoInput.trim() && code && !appliedPromo) {
+      setAppliedPromo(BETA_PROMO_CODE);
+    }
     setBusy(true);
     try {
-      const result = await startAssessmentCheckout(appliedPromo);
-      if (result.alreadyPurchased) {
-        toast("Your assessment is already unlocked.");
+      const result = await startAssessmentCheckout(code);
+      if (result.alreadyPurchased || result.granted) {
+        toast(result.granted ? "Promo applied. Your assessment is unlocked." : "Your assessment is already unlocked.");
         onPurchased?.();
+        return;
       }
     } catch (error) {
       console.error("Checkout failed", error);
       toast(error?.message || "Unable to start checkout. Please try again.");
+    } finally {
       setBusy(false);
     }
   };
@@ -170,6 +188,12 @@ export default function WelcomePurchaseModal({
                                 setPromoInput(e.target.value);
                                 setPromoError("");
                               }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  applyPromo();
+                                }
+                              }}
                               placeholder="Enter promo code"
                               autoComplete="off"
                               disabled={busy}
@@ -181,6 +205,17 @@ export default function WelcomePurchaseModal({
                           {promoError ? <em>{promoError}</em> : null}
                           {free ? <em className="ok">Code {BETA_PROMO_CODE} applied.</em> : null}
                         </label>
+                        <button
+                          type="button"
+                          className="welcome-purchase-skip"
+                          onClick={() => {
+                            if (onBrowseResources) onBrowseResources();
+                            else onClose?.();
+                          }}
+                          disabled={busy}
+                        >
+                          Don’t want to purchase? Check out our free resources
+                        </button>
                       </div>
                     ) : null}
                   </motion.div>
@@ -213,11 +248,11 @@ export default function WelcomePurchaseModal({
                   }}
                   disabled={busy}
                 >
-                  {step === 0 ? "Explore free resources" : "Back"}
+                  {step === 0 ? "Skip for now" : "Back"}
                 </button>
                 {last ? (
                   <button type="button" className="welcome-purchase-primary" onClick={purchase} disabled={busy}>
-                    {busy ? "Redirecting…" : free ? "Begin free assessment" : `Purchase and begin — ${ASSESSMENT_PRICE_LABEL}`}
+                    {busy ? "Unlocking…" : free ? "Begin free assessment" : `Purchase and begin — ${ASSESSMENT_PRICE_LABEL}`}
                   </button>
                 ) : (
                   <button type="button" className="welcome-purchase-primary" onClick={() => setStep((current) => current + 1)}>

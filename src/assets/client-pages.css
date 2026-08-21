@@ -1,0 +1,439 @@
+/* Shared visual patterns for Report, Action Plan, Help Center, Onboarding, and form pages.
+   Prefixed with cp- to avoid colliding with base .panel / .btn selectors from dashboard-preview.css. */
+
+.cp-hero {
+  background: linear-gradient(120deg, var(--navy) 0%, #16305c 100%);
+  border-radius: 20px;
+  padding: 30px 32px;
+  color: #fff;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 26px;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.cp-hero::after {
+  content: "";
+  position: absolute;
+  right: -70px;
+  top: -70px;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(242, 101, 34, 0.28), transparent 70%);
+}
+
+.cp-gauge {
+  width: 112px;
+  height: 112px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.cp-gauge-inner {
+  width: 86px;
+  height: 86px;
+  border-radius: 50%;
+  background: #0e2140;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.cp-gauge-inner strong {
+  font: 800 24px Manrope, sans-serif;
+  line-height: 1;
+  color: #fff;
+}
+
+.cp-gauge-inner span {
+  font-size: 0.625rem;
+  color: rgba(255, 255, 255, 0.55);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-top: 4px;
+  font-weight: 700;
+}
+
+.cp-hero-body {
+  position: relative;
+  z-index: 1;
+}
+
+.cp-hero-body h2 {
+  font-family: Manrope, sans-serif;
+  font-size: 1.375rem;
+  margin: 9px 0 7px;
+  color: #fff;
+  line-height: 1.3;
+}
+
+.cp-hero-body p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  max-width: 700px;
+}
+
+/* Category cards with initial-badge icon */
+.cp-cat-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.01em;
+  flex-shrink: 0;
+}
+
+.cp-cat-icon.healthy { background: linear-gradient(135deg, #1f9c74, #2bb3c7); }
+.cp-cat-icon.tweak { background: linear-gradient(135deg, var(--yellow), var(--orange)); }
+.cp-cat-icon.attention { background: linear-gradient(135deg, var(--orange), var(--attention)); }
+.cp-cat-icon.info { background: linear-gradient(135deg, var(--royal), var(--cyan)); }
+
+.cp-cat-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cp-cat-score {
+  font: 800 28px Manrope, sans-serif;
+  color: var(--text);
+  line-height: 1;
+}
+
+/* Priority / action-item cards */
+.cp-priority {
+  display: grid;
+  grid-template-columns: 34px 1fr auto;
+  gap: 14px;
+  align-items: center;
+  padding: 15px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-left: 4px solid var(--line);
+  margin-bottom: 10px;
+}
+
+.cp-priority.attention { border-left-color: var(--attention); }
+.cp-priority.tweak { border-left-color: var(--yellow); }
+.cp-priority.info { border-left-color: var(--royal); }
+.cp-priority.done { border-left-color: var(--healthy); opacity: 0.72; }
+
+.cp-priority-num {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font: 800 13px Manrope, sans-serif;
+  background: #f1f4f7;
+  color: #6e7d8f;
+}
+
+.cp-priority.attention .cp-priority-num { background: var(--attention-bg); color: var(--attention); }
+.cp-priority.tweak .cp-priority-num { background: var(--tweak-bg); color: var(--tweak); }
+.cp-priority.info .cp-priority-num { background: #eef5fa; color: var(--royal); }
+.cp-priority.done .cp-priority-num { background: var(--healthy-bg); color: var(--healthy); }
+
+.cp-priority h3 {
+  margin: 0 0 3px;
+  font-size: 0.9375rem;
+  font-family: Manrope, sans-serif;
+}
+
+.cp-priority p {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+/* Roadmap with connecting line */
+.cp-roadmap {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0;
+  position: relative;
+  padding-top: 6px;
+}
+
+.cp-roadmap::before {
+  content: "";
+  position: absolute;
+  top: 21px;
+  left: 5%;
+  right: 5%;
+  height: 2px;
+  background: var(--line);
+  z-index: 0;
+}
+
+.cp-roadmap-step {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  padding: 0 6px;
+}
+
+.cp-roadmap-dot {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  margin: 0 auto 10px;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 0.9375rem;
+  background: var(--surface);
+  border: 2px solid var(--line);
+  color: var(--muted);
+}
+
+.cp-roadmap-step.done .cp-roadmap-dot {
+  background: var(--healthy-bg);
+  border-color: var(--healthy);
+  color: var(--healthy);
+}
+
+.cp-roadmap-step.current .cp-roadmap-dot {
+  background: linear-gradient(135deg, var(--royal), var(--cyan));
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 0 0 4px rgba(46, 107, 176, 0.14);
+}
+
+.cp-roadmap-step strong {
+  display: block;
+  font-size: 0.8125rem;
+  margin-bottom: 3px;
+}
+
+.cp-roadmap-step span {
+  font-size: 0.75rem;
+  color: var(--muted);
+  display: block;
+}
+
+/* Resource cards */
+.cp-resource {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.cp-resource:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px rgba(11, 31, 74, 0.08);
+}
+
+.cp-resource-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.cp-resource-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: #eef2f6;
+  color: var(--royal);
+  font-size: 0.8125rem;
+  flex-shrink: 0;
+}
+
+.cp-resource h3 {
+  margin: 2px 0 6px;
+  font-size: 0.9375rem;
+  line-height: 1.35;
+}
+
+.cp-resource p {
+  margin: 0 0 14px;
+  font-size: 0.8125rem;
+  color: var(--muted);
+  line-height: 1.5;
+  flex: 1;
+}
+
+/* Locked / unpaid banner */
+.cp-locked {
+  background: linear-gradient(120deg, var(--navy), #16305c);
+  border-radius: 16px;
+  padding: 22px 26px;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.cp-locked strong {
+  display: block;
+  font-family: Manrope, sans-serif;
+  font-size: 1.0625rem;
+  margin-bottom: 4px;
+}
+
+.cp-locked p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.8438rem;
+  max-width: 520px;
+}
+
+/* Onboarding stepper */
+.cp-stepper {
+  display: flex;
+  gap: 7px;
+  margin-bottom: 22px;
+}
+
+.cp-stepper span {
+  height: 7px;
+  border-radius: 99px;
+  background: var(--line);
+  transition: width 0.2s ease, background 0.2s ease;
+}
+
+.cp-stepper span.active {
+  width: 30px;
+  background: linear-gradient(90deg, var(--royal), var(--cyan));
+}
+
+.cp-stepper span.done {
+  width: 14px;
+  background: var(--royal);
+}
+
+.cp-stepper span.todo {
+  width: 14px;
+}
+
+.cp-step-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--royal), var(--cyan));
+  color: #fff;
+  font-family: Manrope, sans-serif;
+  font-weight: 800;
+  font-size: 1.125rem;
+  margin-bottom: 14px;
+}
+
+/* Severity segmented control (bug report) */
+.cp-severity-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.cp-severity-option {
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 8px;
+  text-align: center;
+  cursor: pointer;
+  background: var(--surface);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.cp-severity-option strong {
+  display: block;
+  font-size: 0.8125rem;
+  margin-bottom: 2px;
+}
+
+.cp-severity-option span {
+  font-size: 0.6875rem;
+  color: var(--muted);
+}
+
+.cp-severity-option.active {
+  border-color: var(--royal);
+  background: #eef5fa;
+}
+
+.cp-severity-option.active.low { border-color: var(--healthy); background: var(--healthy-bg); }
+.cp-severity-option.active.medium { border-color: var(--yellow); background: var(--tweak-bg); }
+.cp-severity-option.active.high { border-color: var(--orange); background: #fff1e8; }
+.cp-severity-option.active.critical { border-color: var(--attention); background: var(--attention-bg); }
+
+.cp-form-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--navy), var(--royal));
+  color: #fff;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+/* Feedback modal star rating */
+.cp-rating-row {
+  display: flex;
+  gap: 8px;
+}
+
+.cp-star {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.cp-star.active {
+  border-color: var(--yellow);
+  background: #fff8e1;
+  color: var(--tweak);
+}
+
+@media (max-width: 720px) {
+  .cp-hero {
+    grid-template-columns: 1fr;
+    text-align: center;
+    justify-items: center;
+  }
+  .cp-roadmap {
+    grid-template-columns: 1fr 1fr;
+    row-gap: 20px;
+  }
+  .cp-roadmap::before {
+    display: none;
+  }
+  .cp-severity-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}

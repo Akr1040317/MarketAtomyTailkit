@@ -6,6 +6,7 @@ async function grantAssessmentAccess(uid, extra = {}) {
   const payload = {
     assessmentPurchased: true,
     assessmentPurchasedAt: admin.firestore.FieldValue.serverTimestamp(),
+    hideOnboarding: true,
   };
 
   Object.entries(extra).forEach(([key, value]) => {

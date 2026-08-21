@@ -15,6 +15,26 @@ function randomSuffix() {
   return out;
 }
 
+function fallbackAppUrl() {
+  return `${APP_BASE_URL.value()}/dashboard`;
+}
+
+function safeReturnUrl(candidate, fallback) {
+  try {
+    const parsed = new URL(String(candidate || ""));
+    const host = parsed.hostname.toLowerCase();
+    const allowed =
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host.endsWith(".web.app") ||
+      host.endsWith(".firebaseapp.com");
+    if (!allowed || parsed.pathname !== "/dashboard") return fallback;
+    return parsed.toString();
+  } catch {
+    return fallback;
+  }
+}
+
 function getStripe() {
   return new Stripe(STRIPE_SECRET_KEY.value(), {
     apiVersion: "2026-07-29.dahlia",
@@ -46,15 +66,27 @@ const createCheckoutSession = onCall(
       throw new HttpsError("invalid-argument", "That promo code is not valid.");
     }
 
+    const applyBeta = Boolean(promoCode) && isBetaPromoCode(promoCode);
+    if (applyBeta) {
+      await grantAssessmentAccess(uid, {
+        assessmentPurchaseType: "promo",
+        promoCodeUsed: "beta2026!",
+      });
+      return { alreadyPurchased: true, granted: true, url: null };
+    }
+
     const stripe = getStripe();
     const catalog = getStripeCatalog(STRIPE_SECRET_KEY.value());
-    const applyBeta = Boolean(promoCode) && isBetaPromoCode(promoCode);
+    const returnOrigin = safeReturnUrl(request.data?.successUrl, `${fallbackAppUrl()}?purchase=success`);
+    const parsedReturn = new URL(returnOrigin);
+    const successUrl = `${parsedReturn.origin}/dashboard?purchase=success&session_id={CHECKOUT_SESSION_ID}`;
+    const cancelUrl = `${parsedReturn.origin}/dashboard?purchase=cancel`;
 
     const sessionParams = {
       mode: "payment",
       line_items: [{ price: catalog.priceId, quantity: 1 }],
-      success_url: `${APP_BASE_URL.value()}/dashboard?purchase=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${APP_BASE_URL.value()}/dashboard?purchase=cancel`,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
       client_reference_id: uid,
       metadata: {
         firebaseUid: uid,
@@ -73,11 +105,7 @@ const createCheckoutSession = onCall(
       sessionParams.customer_email = email;
     }
 
-    if (applyBeta) {
-      sessionParams.discounts = [{ coupon: catalog.couponId }];
-    } else {
-      sessionParams.allow_promotion_codes = true;
-    }
+    sessionParams.allow_promotion_codes = true;
 
     const session = await stripe.checkout.sessions.create(sessionParams);
     if (!session.url) {

@@ -5,6 +5,8 @@ import { db } from "./firebaseConfig";
 import { processComputedScores } from "./utils/analytics";
 import { generateActionItems, getRecommendedResources } from "./utils/reportContent";
 import { toast } from "./components/Toast";
+import "./assets/client-pages.css";
+import LockedFeature from "./components/LockedFeature";
 
 const CATEGORIES = {
   foundationalStructure: "Foundational Structure",
@@ -14,7 +16,7 @@ const CATEGORIES = {
   general: "Overall Health",
 };
 
-export default function ActionPlan({ setActiveView }) {
+export default function ActionPlan({ setActiveView, hasAssessmentAccess = true, onRequestPurchase }) {
   const [enhancedScores, setEnhancedScores] = useState(null);
   const [complete, setComplete] = useState(false);
   const [doneIds, setDoneIds] = useState([]);
@@ -54,7 +56,6 @@ export default function ActionPlan({ setActiveView }) {
       items.push({
         id: "finish-assessment",
         pill: "info",
-        label: "Priority",
         title: "Finish remaining assessment sections",
         body: "Complete the baseline before finalizing strategy.",
         continueAssessment: true,
@@ -65,7 +66,6 @@ export default function ActionPlan({ setActiveView }) {
       items.push({
         id: `cat:${item.category}`,
         pill: "attention",
-        label: "Priority",
         title: `Review ${CATEGORIES[item.category] || item.category}`,
         body: `${CATEGORIES[item.category] || item.category} is currently one of your lowest categories.`,
       });
@@ -80,13 +80,12 @@ export default function ActionPlan({ setActiveView }) {
           items.push({
             id: `cat:${row.key}`,
             pill: "tweak",
-            label: "Priority",
             title: `Strengthen ${CATEGORIES[row.key]}`,
             body: `${CATEGORIES[row.key]} currently needs tweaking.`,
           });
         });
     }
-    return items.slice(0, 6).map((item, index) => ({ ...item, label: `Priority ${index + 1}` }));
+    return items.slice(0, 6);
   }, [enhancedScores, complete]);
 
   const toggleDone = (id) => {
@@ -116,28 +115,35 @@ export default function ActionPlan({ setActiveView }) {
     toast("Action plan exported.");
   };
 
-  const roadmap = complete
-    ? [
-        ["✓ Assessment", "Build the baseline"],
-        ["◉ Analysis", "Understand the gaps"],
-        ["○ Strategy", "Choose priorities"],
-        ["○ Implementation", "Put the plan to work"],
-        ["○ Growth", "Measure and improve"],
-      ]
-    : [
-        ["◉ Assessment", "Build the baseline"],
-        ["○ Analysis", "Understand the gaps"],
-        ["○ Strategy", "Choose priorities"],
-        ["○ Implementation", "Put the plan to work"],
-        ["○ Growth", "Measure and improve"],
-      ];
+  const roadmap = [
+    ["Assessment", "Build the baseline"],
+    ["Analysis", "Understand the gaps"],
+    ["Strategy", "Choose priorities"],
+    ["Implementation", "Put the plan to work"],
+    ["Growth", "Measure and improve"],
+  ];
+  const roadmapStage = complete ? 1 : 0;
+
+  if (hasAssessmentAccess === false) {
+    return (
+      <LockedFeature
+        title="Action Plan"
+        body="Your action plan is created from assessment results, so this page stays locked until you purchase."
+        onRequestPurchase={onRequestPurchase}
+        onBrowseResources={() => setActiveView?.("resources")}
+      />
+    );
+  }
 
   return (
     <div className="page">
       <div className="page-head">
         <div>
           <h1>Action Plan</h1>
-          <p>Turn assessment findings into an ordered list of practical follow-up work. This page translates your lowest health areas and report priorities into a working plan.</p>
+          <p>
+            Turn assessment findings into an ordered list of practical follow-up work. This page translates your
+            lowest health areas and report priorities into a working plan.
+          </p>
         </div>
         <button type="button" className="btn btn-primary" onClick={exportPlan}>
           Export Plan
@@ -158,30 +164,28 @@ export default function ActionPlan({ setActiveView }) {
               {tasks.length === 0 ? (
                 <div className="callout">Complete more of the assessment to generate a prioritized plan.</div>
               ) : (
-                tasks.map((task) => {
+                tasks.map((task, index) => {
                   const done = doneIds.includes(task.id);
                   return (
-                    <div className="task callout" key={task.id} style={{ marginBottom: 10 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", gap: 18 }}>
-                        <div>
-                          <span className={`pill ${done ? "healthy" : task.pill}`}>{done ? "Complete" : task.label}</span>
-                          <h3>{task.title}</h3>
-                          <p>{task.body}</p>
-                        </div>
-                        {task.continueAssessment && !done ? (
-                          <button type="button" className="btn btn-primary" onClick={() => setActiveView("assessmentUser")}>
-                            Continue
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            className={`btn ${done ? "btn-navy" : "btn-secondary"} complete-task`}
-                            onClick={() => toggleDone(task.id)}
-                          >
-                            {done ? "Completed" : "Mark Complete"}
-                          </button>
-                        )}
+                    <div className={`cp-priority ${done ? "done" : task.pill}`} key={task.id}>
+                      <div className="cp-priority-num">{done ? "✓" : index + 1}</div>
+                      <div>
+                        <h3>{task.title}</h3>
+                        <p>{task.body}</p>
                       </div>
+                      {task.continueAssessment && !done ? (
+                        <button type="button" className="btn btn-primary" onClick={() => setActiveView("assessmentUser")}>
+                          Continue
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className={`btn ${done ? "btn-navy" : "btn-secondary"}`}
+                          onClick={() => toggleDone(task.id)}
+                        >
+                          {done ? "Completed" : "Mark Complete"}
+                        </button>
+                      )}
                     </div>
                   );
                 })
@@ -197,14 +201,17 @@ export default function ActionPlan({ setActiveView }) {
               </div>
             </div>
             <div className="panel-body">
-              <div className="grid-3">
-                {roadmap.map(([title, copy]) => (
-                  <div className="callout" key={title}>
-                    <strong>{title}</strong>
-                    <br />
-                    {copy}
-                  </div>
-                ))}
+              <div className="cp-roadmap">
+                {roadmap.map(([title, copy], index) => {
+                  const state = index < roadmapStage ? "done" : index === roadmapStage ? "current" : "todo";
+                  return (
+                    <div className={`cp-roadmap-step ${state}`} key={title}>
+                      <div className="cp-roadmap-dot">{state === "done" ? "✓" : index + 1}</div>
+                      <strong>{title}</strong>
+                      <span>{copy}</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </section>
@@ -218,11 +225,22 @@ export default function ActionPlan({ setActiveView }) {
                 <p>Current completion</p>
               </div>
             </div>
-            <div className="panel-body">
-              <div className="report-score">{progress}%</div>
-              <div className="progress" style={{ marginTop: 8 }}>
-                <span style={{ width: `${progress}%` }} />
+            <div className="panel-body" style={{ display: "flex", alignItems: "center", gap: 18 }}>
+              <div
+                className="cp-gauge"
+                style={{
+                  width: 78,
+                  height: 78,
+                  background: `conic-gradient(var(--cyan) 0 ${progress}%, #eef2f6 ${progress}%)`,
+                }}
+              >
+                <div className="cp-gauge-inner" style={{ width: 60, height: 60, background: "#fff", border: "1px solid var(--line)" }}>
+                  <strong style={{ color: "var(--text)" }}>{progress}%</strong>
+                </div>
               </div>
+              <p className="muted" style={{ margin: 0, fontSize: "0.8125rem" }}>
+                {doneCount} of {tasks.length} priority actions marked complete.
+              </p>
             </div>
           </section>
           <section className="panel">
@@ -237,21 +255,30 @@ export default function ActionPlan({ setActiveView }) {
                 resources.map((resource, index) => (
                   <button
                     type="button"
-                    className="callout"
+                    className="cp-priority info"
                     key={resource.title}
-                    style={{ display: "block", width: "100%", textAlign: "left", marginTop: index ? 9 : 0 }}
+                    style={{ display: "grid", width: "100%", textAlign: "left", cursor: "pointer", marginTop: index ? 10 : 0 }}
                     onClick={() => setActiveView("resources")}
                   >
-                    <strong>{resource.title}</strong>
-                    <br />
-                    {resource.type || "Recommended resource"}
+                    <div className="cp-priority-num">▤</div>
+                    <div>
+                      <h3>{resource.title}</h3>
+                      <p>{resource.type || "Recommended resource"}</p>
+                    </div>
                   </button>
                 ))
               ) : (
-                <button type="button" className="callout" style={{ display: "block", width: "100%", textAlign: "left" }} onClick={() => setActiveView("resources")}>
-                  <strong>Open Help Center</strong>
-                  <br />
-                  Guides and consultations
+                <button
+                  type="button"
+                  className="cp-priority info"
+                  style={{ display: "grid", width: "100%", textAlign: "left", cursor: "pointer" }}
+                  onClick={() => setActiveView("resources")}
+                >
+                  <div className="cp-priority-num">▤</div>
+                  <div>
+                    <h3>Open Help Center</h3>
+                    <p>Guides and consultations</p>
+                  </div>
                 </button>
               )}
             </div>

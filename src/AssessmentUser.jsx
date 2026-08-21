@@ -16,15 +16,35 @@ import { getAuth } from "firebase/auth";
 import { db } from "./firebaseConfig";
 import { processComputedScores } from "./utils/analytics";
 import { getCategoryMaxScore } from "./utils/scoreRanges";
-import ToastHost, { toast } from "./components/Toast";
+import { toast } from "./components/Toast";
+import LockedFeature from "./components/LockedFeature";
 
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+// Scored question types must be answered before a section can be submitted.
+// Free-text / notes questions are always optional.
+function isRequiredQuestion(question) {
+  if (!question) return false;
+  return question.type === "multipleChoice" || question.type === "multipleSelect";
+}
 
 function isAnswered(question, answers) {
   if (!question) return false;
   const ans = answers[question.id];
   if (question.type === "multipleSelect") return Array.isArray(ans) && ans.length > 0;
   return Boolean(ans && String(ans).trim() !== "");
+}
+
+function isPendingCatchup(question, answers, confirmedOptionalSkips) {
+  if (!question || isAnswered(question, answers)) return false;
+  if (!isRequiredQuestion(question) && confirmedOptionalSkips.has(question.id)) return false;
+  return true;
+}
+
+function pendingCatchupItems(questions, answers, confirmedOptionalSkips) {
+  return (questions || [])
+    .map((q, idx) => ({ q, idx }))
+    .filter(({ q }) => isPendingCatchup(q, answers, confirmedOptionalSkips));
 }
 
 function gateIndexFor(section) {
@@ -73,6 +93,10 @@ export default function AssessmentUser({ setActiveView, hasAssessmentAccess = tr
   const [selectedSection, setSelectedSection] = useState(null);
   const [answers, setAnswers] = useState({});
   const [questionIndex, setQuestionIndex] = useState(0);
+  const [visitedIds, setVisitedIds] = useState(() => new Set());
+  const [reviewMode, setReviewMode] = useState(false);
+  const [catchupMode, setCatchupMode] = useState(false);
+  const [confirmedOptionalSkips, setConfirmedOptionalSkips] = useState(() => new Set());
   const [completedSections, setCompletedSections] = useState([]);
   const [existingSubmission, setExistingSubmission] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -110,13 +134,33 @@ export default function AssessmentUser({ setActiveView, hasAssessmentAccess = tr
   );
   const currentQuestion = visibleQuestions[questionIndex] || null;
   const sectionTotal = visibleQuestions.length;
-  const sectionPercent = sectionTotal ? Math.round(((questionIndex + 1) / sectionTotal) * 100) : 0;
+
+  const sectionAnsweredCount = useMemo(
+    () => visibleQuestions.filter((q) => isAnswered(q, answers)).length,
+    [visibleQuestions, answers]
+  );
+  const sectionPercent = sectionTotal ? Math.round((sectionAnsweredCount / sectionTotal) * 100) : 0;
+
   const overallPercent = sections.length
     ? Math.round((completedSections.length / sections.length) * 100)
     : 0;
   const currentSectionIdx = sections.findIndex((section) => section.id === selectedSection?.id);
-  const canContinue = isAnswered(currentQuestion, answers);
+
+  const requiredUnanswered = useMemo(
+    () => visibleQuestions.filter((q) => isRequiredQuestion(q) && !isAnswered(q, answers)),
+    [visibleQuestions, answers]
+  );
+  const canSubmitSection = sectionTotal > 0 && requiredUnanswered.length === 0;
+
+  const pendingCatchup = useMemo(
+    () => pendingCatchupItems(visibleQuestions, answers, confirmedOptionalSkips),
+    [visibleQuestions, answers, confirmedOptionalSkips]
+  );
+  const canContinue = catchupMode
+    ? !!currentQuestion && isAnswered(currentQuestion, answers)
+    : !!currentQuestion && (!isRequiredQuestion(currentQuestion) || isAnswered(currentQuestion, answers));
   const isLastVisible = sectionTotal > 0 && questionIndex >= sectionTotal - 1;
+  const isLastCatchup = catchupMode && pendingCatchup.every((item) => item.idx === questionIndex || isAnswered(item.q, answers));
   const isLastSection = currentSectionIdx >= 0 && currentSectionIdx === sections.length - 1;
 
   const getNextSection = (fromSection = selectedSection) => {
@@ -158,10 +202,24 @@ export default function AssessmentUser({ setActiveView, hasAssessmentAccess = tr
     });
   };
 
+  const draftMap = user ? readDraft(user.uid) : {};
+
+  const sectionStatus = (section) => {
+    if (completedSections.includes(section.title)) return "done";
+    if (selectedSection?.id === section.id) return "current";
+    const draft = draftMap[section.id];
+    if (draft?.answers && Object.keys(draft.answers).length > 0) return "in-progress";
+    return "not-started";
+  };
+
   const handleSectionClick = async (section, startAt = "resume") => {
     setSelectedSection(section);
     setAnswers({});
     setQuestionIndex(0);
+    setVisitedIds(new Set());
+    setReviewMode(false);
+    setCatchupMode(false);
+    setConfirmedOptionalSkips(new Set());
     setDrawerOpen(false);
     let nextAnswers = {};
     let existing = null;
@@ -215,6 +273,9 @@ export default function AssessmentUser({ setActiveView, hasAssessmentAccess = tr
       nextIndex = firstOpen >= 0 ? firstOpen : 0;
     }
     setQuestionIndex(nextIndex);
+    if (visible[nextIndex]) {
+      setVisitedIds(new Set([visible[nextIndex].id]));
+    }
   };
 
   useEffect(() => {
@@ -267,6 +328,17 @@ export default function AssessmentUser({ setActiveView, hasAssessmentAccess = tr
     }
   }, [sectionTotal, questionIndex]);
 
+  useEffect(() => {
+    if (currentQuestion) {
+      setVisitedIds((prev) => {
+        if (prev.has(currentQuestion.id)) return prev;
+        const next = new Set(prev);
+        next.add(currentQuestion.id);
+        return next;
+      });
+    }
+  }, [currentQuestion]);
+
   const handleTextAnswerChange = (questionId, value) => {
     setAnswers((prev) => {
       const next = { ...prev, [questionId]: value };
@@ -307,13 +379,8 @@ export default function AssessmentUser({ setActiveView, hasAssessmentAccess = tr
 
   const handleSubmit = async () => {
     if (!selectedSection) return false;
-    const unanswered = selectedSection.questions.filter((q, idx) => {
-      if (isNonManufacturing && idx !== manufacturingGateIndex) return false;
-      return !isAnswered(q, answers);
-    });
-
-    if (unanswered.length > 0) {
-      toast("Please answer all questions before submitting.");
+    if (!canSubmitSection) {
+      toast("Answer all required questions before submitting.");
       return false;
     }
 
@@ -333,14 +400,14 @@ export default function AssessmentUser({ setActiveView, hasAssessmentAccess = tr
         sectionScore += weight;
         processedAnswers[q.id] = { answer: ans, weight };
       } else if (q.type === "multipleSelect") {
-        processedAnswers[q.id] = ans.map((a) => {
+        processedAnswers[q.id] = (ans || []).map((a) => {
           const option = q.options.find((o) => o.label === a);
           const weight = option ? option.weight : 0;
           sectionScore += weight;
           return { answer: a, weight };
         });
       } else {
-        processedAnswers[q.id] = { answer: ans, weight: 0 };
+        processedAnswers[q.id] = { answer: ans || "", weight: 0 };
       }
     });
 
@@ -437,30 +504,81 @@ export default function AssessmentUser({ setActiveView, hasAssessmentAccess = tr
     }
   };
 
-  const goContinue = async () => {
+  const goContinue = () => {
     if (!currentQuestion || !canContinue || submitting) return;
     persistDraft();
+    if (catchupMode) {
+      advanceCatchup(confirmedOptionalSkips);
+      return;
+    }
     if (!isLastVisible) {
-      toast("Saved. Moving to the next question.");
       setQuestionIndex((idx) => idx + 1);
       return;
     }
+    enterCatchupOrReview(confirmedOptionalSkips);
+  };
 
-    setSubmitting(true);
-    const saved = await handleSubmit();
-    setSubmitting(false);
-    if (!saved) return;
-
-    const next = getNextSection();
-    if (next) {
-      toast("Section saved. Moving to the next section.");
-      await handleSectionClick(next, "start");
+  const goSkip = () => {
+    if (!currentQuestion || submitting) return;
+    persistDraft();
+    if (catchupMode) {
+      if (isRequiredQuestion(currentQuestion)) {
+        toast("This question is required. Please choose an answer to finish the section.");
+        return;
+      }
+      const nextConfirmed = new Set(confirmedOptionalSkips);
+      nextConfirmed.add(currentQuestion.id);
+      setConfirmedOptionalSkips(nextConfirmed);
+      advanceCatchup(nextConfirmed, questionIndex);
       return;
     }
-    toast("Section saved. Scores have been updated.");
+    if (!isLastVisible) {
+      setQuestionIndex((idx) => idx + 1);
+      return;
+    }
+    enterCatchupOrReview(confirmedOptionalSkips);
+  };
+
+  const enterCatchupOrReview = (confirmed = confirmedOptionalSkips) => {
+    const pending = pendingCatchupItems(visibleQuestions, answers, confirmed);
+    if (pending.length === 0) {
+      setCatchupMode(false);
+      setReviewMode(true);
+      return;
+    }
+    setCatchupMode(true);
+    setReviewMode(false);
+    setQuestionIndex(pending[0].idx);
+    toast(
+      pending.length === 1
+        ? "One skipped question still needs your attention before you can save this section."
+        : `${pending.length} skipped questions still need your attention before you can save this section.`
+    );
+  };
+
+  const advanceCatchup = (confirmed = confirmedOptionalSkips, excludeIndex = -1) => {
+    const pending = pendingCatchupItems(visibleQuestions, answers, confirmed).filter(
+      (item) => item.idx !== excludeIndex
+    );
+    if (pending.length === 0) {
+      setCatchupMode(false);
+      setReviewMode(true);
+      return;
+    }
+    const after = pending.find((item) => item.idx > questionIndex);
+    setQuestionIndex((after || pending[0]).idx);
+  };
+
+  const jumpToQuestion = (idx) => {
+    setReviewMode(false);
+    setQuestionIndex(idx);
   };
 
   const goBack = async () => {
+    if (reviewMode) {
+      setReviewMode(false);
+      return;
+    }
     if (questionIndex > 0) {
       setQuestionIndex((idx) => idx - 1);
       return;
@@ -470,23 +588,36 @@ export default function AssessmentUser({ setActiveView, hasAssessmentAccess = tr
     }
   };
 
-  const saveForLater = () => {
-    persistDraft();
-    toast("Saved. You can return to this question later.");
+  const saveSection = async () => {
+    if (!canSubmitSection) {
+      toast("Answer all required questions before submitting.");
+      return;
+    }
+    setSubmitting(true);
+    const saved = await handleSubmit();
+    setSubmitting(false);
+    if (!saved) return;
+
+    setReviewMode(false);
+    const next = getNextSection();
+    if (next) {
+      toast("Section saved. Moving to the next section.");
+      await handleSectionClick(next, "start");
+      return;
+    }
+    toast("Section saved. Scores have been updated.");
   };
 
   const saveAndExit = async () => {
     persistDraft();
-    const unanswered = (selectedSection?.questions || []).filter((q, idx) => {
-      if (isNonManufacturing && idx !== manufacturingGateIndex) return false;
-      return !isAnswered(q, answers);
-    });
-    if (unanswered.length === 0 && selectedSection) {
+    if (canSubmitSection && selectedSection) {
       setSubmitting(true);
       await handleSubmit();
       setSubmitting(false);
+      toast("Section saved. Returning to dashboard.");
+    } else {
+      toast("Progress saved as a draft. Returning to dashboard.");
     }
-    toast("Progress saved. Returning to dashboard.");
     if (setActiveView) setActiveView("dashboard");
   };
 
@@ -528,51 +659,52 @@ export default function AssessmentUser({ setActiveView, hasAssessmentAccess = tr
     if (setActiveView) setActiveView("reports");
   };
 
-  const overviewRows = useMemo(() => {
-    if (currentSectionIdx < 0) return [];
-    const rows = [];
-    if (currentSectionIdx > 0) rows.push({ section: sections[currentSectionIdx - 1], kind: "prev" });
-    rows.push({ section: sections[currentSectionIdx], kind: "current" });
-    if (currentSectionIdx + 1 < sections.length) {
-      rows.push({ section: sections[currentSectionIdx + 1], kind: "next" });
-    }
-    if (currentSectionIdx + 2 < sections.length) {
-      rows.push({ section: sections[currentSectionIdx + 2], kind: "later" });
-    }
-    return rows;
-  }, [sections, currentSectionIdx]);
+  const isGateQuestion = isProductionSection && currentQuestion?.id === manufacturingGateQuestionId;
+  const catchupRequired = catchupMode && isRequiredQuestion(currentQuestion);
+  const kicker = catchupMode
+    ? catchupRequired
+      ? "Skipped — required"
+      : "Skipped — optional"
+    : currentQuestion?.type === "multipleSelect"
+      ? "Select all that apply"
+      : currentQuestion?.type === "multipleChoice"
+        ? isGateQuestion
+          ? "Production applicability check"
+          : "Choose one"
+        : "Optional notes";
 
-  const kicker = currentQuestion?.type === "multipleSelect"
-    ? "Select all that apply"
-    : currentQuestion?.type === "multipleChoice"
-      ? isProductionSection && currentQuestion?.id === manufacturingGateQuestionId
-        ? "Production applicability check"
-        : "Choose the answer that best reflects your business today"
-      : "Add a short response";
+  const helper = catchupMode
+    ? catchupRequired
+      ? "You skipped this required question. Choose an answer to finish the section."
+      : "You skipped this optional question. Answer it now, or skip it again to leave it blank."
+    : isGateQuestion
+      ? "If you are not a manufacturing company, the remaining Production questions are skipped and this section is marked not applicable."
+      : currentQuestion?.type === "text"
+        ? "Add any notes that help complete this section, or continue without one."
+        : "";
 
-  const helper = currentQuestion?.type === "multipleSelect"
-    ? "Choose every option that currently applies. You can select more than one."
-    : currentQuestion?.type === "multipleChoice"
-      ? isProductionSection && currentQuestion?.id === manufacturingGateQuestionId
-        ? "If you are not a manufacturing company, the remaining Production questions are skipped and this section is marked not applicable."
-        : "Choose the answer that is most accurate right now. The goal is to build an honest baseline, not to get a perfect score."
-      : "Add any notes that help complete this section.";
-
+  const showCoach = !catchupMode && Boolean(
+    (selectedSection?.beginningText && questionIndex === 0) ||
+    (selectedSection?.endingText && isLastVisible) ||
+    isNonManufacturing
+  );
   const coachCopy = selectedSection?.beginningText && questionIndex === 0
     ? selectedSection.beginningText
     : selectedSection?.endingText && isLastVisible
       ? selectedSection.endingText
       : isNonManufacturing
         ? "The remaining Production questions are skipped and will not penalize Product / Service scoring."
-        : "Your individual answers are used as part of the broader business health picture. Answer honestly so the report reflects where the business stands today.";
+        : "";
 
-  const continueLabel = isLastVisible
-    ? isLastSection
-      ? "Finish Assessment →"
-      : existingSubmission
-        ? "Save Changes →"
-        : "Save Section →"
-    : "Continue →";
+  const continueLabel = catchupMode
+    ? isLastCatchup
+      ? "Review section →"
+      : "Continue →"
+    : isLastVisible
+      ? pendingCatchup.length > 0
+        ? "Review skipped →"
+        : "Review section →"
+      : "Continue →";
 
   const drawer = (
     <div
@@ -592,11 +724,10 @@ export default function AssessmentUser({ setActiveView, hasAssessmentAccess = tr
           </button>
         </div>
         <div className="callout meta-soft" style={{ marginBottom: 12 }}>
-          Completed sections can be reviewed and edited. Incomplete sections keep their saved progress.
+          Completed sections can be reviewed and edited. In-progress sections keep their saved draft.
         </div>
         {sections.map((section) => {
-          const done = completedSections.includes(section.title);
-          const current = selectedSection?.id === section.id;
+          const status = sectionStatus(section);
           return (
             <button
               type="button"
@@ -607,29 +738,33 @@ export default function AssessmentUser({ setActiveView, hasAssessmentAccess = tr
               <div
                 className="section-num"
                 style={
-                  done
+                  status === "done"
                     ? { background: "#E8F4EA", color: "#166534" }
-                    : current
+                    : status === "current"
                       ? { background: "#EEF5FA", color: "#2E6BB0" }
-                      : undefined
+                      : status === "in-progress"
+                        ? { background: "#FFF5D5", color: "#854D0E" }
+                        : undefined
                 }
               >
-                {done ? "✓" : section.order}
+                {status === "done" ? "✓" : section.order}
               </div>
               <div>
                 <strong>{section.title}</strong>
                 <br />
                 <span>
-                  {current
+                  {status === "current"
                     ? "Current section"
-                    : done
-                      ? "Completed"
-                      : section.order === 19
-                        ? "Includes applicability check"
-                        : "Not started"}
+                    : status === "done"
+                      ? "Completed — tap to review"
+                      : status === "in-progress"
+                        ? "Draft saved"
+                        : section.order === 19
+                          ? "Includes applicability check"
+                          : "Not started"}
                 </span>
               </div>
-              <span>{current ? `${sectionPercent}%` : done ? "Review" : "Open"}</span>
+              <span>{status === "current" ? `${sectionPercent}%` : status === "done" ? "Review" : "Open"}</span>
             </button>
           );
         })}
@@ -651,123 +786,123 @@ export default function AssessmentUser({ setActiveView, hasAssessmentAccess = tr
         </div>
         <form className="panel" onSubmit={submitFeedback}>
           <div className="panel-body">
-                <div className="grid-2">
-                  <div className="form-group">
-                    <label>Overall rating</label>
-                    <select
-                      required
-                      value={feedback.overallRating}
-                      onChange={(e) => setFeedback((p) => ({ ...p, overallRating: e.target.value }))}
-                    >
-                      <option value="" disabled>Select…</option>
-                      <option value="5">5 - Excellent</option>
-                      <option value="4">4 - Good</option>
-                      <option value="3">3 - Neutral</option>
-                      <option value="2">2 - Difficult</option>
-                      <option value="1">1 - Poor</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>Clarity rating</label>
-                    <select
-                      required
-                      value={feedback.clarityRating}
-                      onChange={(e) => setFeedback((p) => ({ ...p, clarityRating: e.target.value }))}
-                    >
-                      <option value="" disabled>Select…</option>
-                      <option value="5">5 - Very clear</option>
-                      <option value="4">4</option>
-                      <option value="3">3</option>
-                      <option value="2">2</option>
-                      <option value="1">1 - Unclear</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>Relevance rating</label>
-                    <select
-                      required
-                      value={feedback.relevanceRating}
-                      onChange={(e) => setFeedback((p) => ({ ...p, relevanceRating: e.target.value }))}
-                    >
-                      <option value="" disabled>Select…</option>
-                      <option value="5">5 - Highly relevant</option>
-                      <option value="4">4</option>
-                      <option value="3">3</option>
-                      <option value="2">2</option>
-                      <option value="1">1 - Not relevant</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>Assessment length</label>
-                    <select
-                      value={feedback.length}
-                      onChange={(e) => setFeedback((p) => ({ ...p, length: e.target.value }))}
-                    >
-                      <option value="just_right">Just right</option>
-                      <option value="too_short">Too short</option>
-                      <option value="too_long">Too long</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="form-group">
-                  <label>How likely are you to recommend the Business Health Check?</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="10"
-                    required
-                    placeholder="0 to 10"
-                    value={feedback.recommendScore}
-                    onChange={(e) => setFeedback((p) => ({ ...p, recommendScore: e.target.value }))}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Most valuable sections</label>
-                  <div className="grid-3">
-                    {sections.map((section) => (
-                      <label className="check-card" key={section.id}>
-                        <input
-                          type="checkbox"
-                          checked={feedback.mostValuableSections.includes(section.title)}
-                          onChange={() =>
-                            setFeedback((p) => {
-                              const current = p.mostValuableSections;
-                              const next = current.includes(section.title)
-                                ? current.filter((title) => title !== section.title)
-                                : [...current, section.title];
-                              return { ...p, mostValuableSections: next };
-                            })
-                          }
-                        />
-                        <div>
-                          <strong>{section.title}</strong>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                <div className="form-group">
-                  <label>Were any questions confusing?</label>
-                  <textarea
-                    value={feedback.confusingQuestions}
-                    onChange={(e) => setFeedback((p) => ({ ...p, confusingQuestions: e.target.value }))}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Was anything important missing?</label>
-                  <textarea
-                    value={feedback.missingTopics}
-                    onChange={(e) => setFeedback((p) => ({ ...p, missingTopics: e.target.value }))}
-                  />
-                </div>
-                <div className="form-actions">
-                  <button type="button" className="btn btn-secondary" onClick={skipFeedback}>
-                    Skip for now
-                  </button>
-                  <button className="btn btn-primary" type="submit" disabled={feedbackLoading}>
-                    {feedbackLoading ? "Submitting…" : "Submit & View Report"}
-                  </button>
-                </div>
+            <div className="grid-2">
+              <div className="form-group">
+                <label>Overall rating</label>
+                <select
+                  required
+                  value={feedback.overallRating}
+                  onChange={(e) => setFeedback((p) => ({ ...p, overallRating: e.target.value }))}
+                >
+                  <option value="" disabled>Select…</option>
+                  <option value="5">5 - Excellent</option>
+                  <option value="4">4 - Good</option>
+                  <option value="3">3 - Neutral</option>
+                  <option value="2">2 - Difficult</option>
+                  <option value="1">1 - Poor</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Clarity rating</label>
+                <select
+                  required
+                  value={feedback.clarityRating}
+                  onChange={(e) => setFeedback((p) => ({ ...p, clarityRating: e.target.value }))}
+                >
+                  <option value="" disabled>Select…</option>
+                  <option value="5">5 - Very clear</option>
+                  <option value="4">4</option>
+                  <option value="3">3</option>
+                  <option value="2">2</option>
+                  <option value="1">1 - Unclear</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Relevance rating</label>
+                <select
+                  required
+                  value={feedback.relevanceRating}
+                  onChange={(e) => setFeedback((p) => ({ ...p, relevanceRating: e.target.value }))}
+                >
+                  <option value="" disabled>Select…</option>
+                  <option value="5">5 - Highly relevant</option>
+                  <option value="4">4</option>
+                  <option value="3">3</option>
+                  <option value="2">2</option>
+                  <option value="1">1 - Not relevant</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Assessment length</label>
+                <select
+                  value={feedback.length}
+                  onChange={(e) => setFeedback((p) => ({ ...p, length: e.target.value }))}
+                >
+                  <option value="just_right">Just right</option>
+                  <option value="too_short">Too short</option>
+                  <option value="too_long">Too long</option>
+                </select>
+              </div>
+            </div>
+            <div className="form-group">
+              <label>How likely are you to recommend the Business Health Check?</label>
+              <input
+                type="number"
+                min="0"
+                max="10"
+                required
+                placeholder="0 to 10"
+                value={feedback.recommendScore}
+                onChange={(e) => setFeedback((p) => ({ ...p, recommendScore: e.target.value }))}
+              />
+            </div>
+            <div className="form-group">
+              <label>Most valuable sections</label>
+              <div className="grid-3">
+                {sections.map((section) => (
+                  <label className="check-card" key={section.id}>
+                    <input
+                      type="checkbox"
+                      checked={feedback.mostValuableSections.includes(section.title)}
+                      onChange={() =>
+                        setFeedback((p) => {
+                          const current = p.mostValuableSections;
+                          const next = current.includes(section.title)
+                            ? current.filter((title) => title !== section.title)
+                            : [...current, section.title];
+                          return { ...p, mostValuableSections: next };
+                        })
+                      }
+                    />
+                    <div>
+                      <strong>{section.title}</strong>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="form-group">
+              <label>Were any questions confusing?</label>
+              <textarea
+                value={feedback.confusingQuestions}
+                onChange={(e) => setFeedback((p) => ({ ...p, confusingQuestions: e.target.value }))}
+              />
+            </div>
+            <div className="form-group">
+              <label>Was anything important missing?</label>
+              <textarea
+                value={feedback.missingTopics}
+                onChange={(e) => setFeedback((p) => ({ ...p, missingTopics: e.target.value }))}
+              />
+            </div>
+            <div className="form-actions">
+              <button type="button" className="btn btn-secondary" onClick={skipFeedback}>
+                Skip for now
+              </button>
+              <button className="btn btn-primary" type="submit" disabled={feedbackLoading}>
+                {feedbackLoading ? "Submitting…" : "Submit & View Report"}
+              </button>
+            </div>
           </div>
         </form>
       </div>
@@ -776,123 +911,182 @@ export default function AssessmentUser({ setActiveView, hasAssessmentAccess = tr
 
   if (hasAssessmentAccess === false) {
     return (
-      <div className="page">
-        <div className="page-head">
-          <div>
-            <h1>Business Health Check Assessment</h1>
-            <p>Unlock the full assessment with a one-time $297 purchase, or apply a promo code to begin.</p>
-          </div>
-        </div>
-        <section className="panel">
-          <div className="panel-body" style={{ padding: 32 }}>
-            <h2 style={{ fontFamily: "Manrope, sans-serif", margin: "0 0 8px" }}>Purchase required</h2>
-            <p className="muted" style={{ maxWidth: 640 }}>
-              After you complete checkout, you can work through the assessment section by section and generate your report.
-            </p>
-            <button type="button" className="btn btn-primary" style={{ marginTop: 18 }} onClick={onRequestPurchase}>
-              Purchase and begin — $297
-            </button>
-          </div>
-        </section>
-      </div>
+      <LockedFeature
+        title="Business Health Check Assessment"
+        body="The assessment stays locked until you purchase, or apply a promo code to begin for free."
+        onRequestPurchase={onRequestPurchase}
+        onBrowseResources={() => setActiveView?.("resources")}
+      />
     );
   }
 
   return (
     <div className="page assessment-page">
-      <div className="page-head assessment-head">
-        <div>
-          <h1>Business Health Assessment</h1>
-          <p>
-            Section {selectedSection?.order || currentSectionIdx + 1} of {sections.length || 21}
-            {sectionTotal ? ` · Question ${questionIndex + 1} of ${sectionTotal}` : ""}
-          </p>
-        </div>
-        <div className="actions">
-          <button type="button" className="btn btn-secondary" onClick={() => setDrawerOpen(true)}>
-            Sections
-          </button>
-          <button type="button" className="btn btn-secondary" onClick={saveForLater}>
-            Save progress
-          </button>
-          <button type="button" className="btn btn-primary" onClick={saveAndExit}>
-            Save & exit
-          </button>
-        </div>
-      </div>
       <div className="assessment-stage">
-          <aside className="assessment-side panel">
-            <div>
-              <div className="side-eyebrow">Business Health Check</div>
-              <h3>Your Assessment</h3>
-              <p>Take it one step at a time. You can stop and come back whenever you need to.</p>
+        <aside className="assessment-side panel">
+          <div>
+            <div className="side-eyebrow">Business Health Check</div>
+            <h3>Your Assessment</h3>
+          </div>
+          <div>
+            <div className="progress-meta">
+              <span>Overall progress</span>
+              <strong>{overallPercent}%</strong>
             </div>
-            <div>
-              <div className="progress-meta">
-                <span>Overall progress</span>
-                <strong>{overallPercent}%</strong>
-              </div>
-              <div className="track">
-                <span style={{ width: `${overallPercent}%` }} />
-              </div>
+            <div className="track">
+              <span style={{ width: `${overallPercent}%` }} />
             </div>
+            <div className="progress-meta" style={{ marginTop: 8 }}>
+              <span>{completedSections.length} of {sections.length || 21} sections complete</span>
+            </div>
+          </div>
+          <div className="side-full-list">
+            <div className="side-eyebrow" style={{ marginBottom: 8 }}>
+              All {sections.length || 21} sections
+            </div>
+            <div className="section-overview">
+              {sections.map((section) => {
+                const status = sectionStatus(section);
+                return (
+                  <button
+                    type="button"
+                    key={section.id}
+                    className={`section-row${status === "current" ? " active" : ""}${status === "done" ? " done" : ""}${status === "in-progress" ? " inprogress" : ""}`}
+                    onClick={() => handleSectionClick(section)}
+                  >
+                    <div className="section-num">{status === "done" ? "✓" : section.order}</div>
+                    <div className="section-row-copy">
+                      <div className="section-row-title">{section.title}</div>
+                      <small>
+                        {status === "current"
+                          ? `${Math.min(questionIndex + 1, sectionTotal)} / ${sectionTotal || 0}`
+                          : status === "done"
+                            ? "Complete"
+                            : status === "in-progress"
+                              ? "Draft"
+                              : "Not started"}
+                      </small>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </aside>
+
+        <div className="assessment-main">
+          <div className="page-head assessment-head">
             <div>
-              <div className="side-eyebrow" style={{ marginBottom: 8 }}>Current area</div>
-              <div className="section-overview">
-                {overviewRows.map((row) => {
-                  const done = completedSections.includes(row.section.title);
+              <h1>{selectedSection?.title || "Assessment"}</h1>
+              <p>
+                {catchupMode
+                  ? pendingCatchup.length
+                    ? `Follow-up · ${pendingCatchup.length} skipped left`
+                    : "Follow-up complete"
+                  : `Section ${selectedSection?.order || currentSectionIdx + 1} of ${sections.length || 21}${
+                      sectionTotal ? ` · Question ${Math.min(questionIndex + 1, sectionTotal)} of ${sectionTotal}` : ""
+                    } · ${sectionPercent}% answered`}
+              </p>
+            </div>
+            <div className="actions">
+              <button type="button" className="btn btn-secondary sections-mobile" onClick={() => setDrawerOpen(true)}>
+                Sections
+              </button>
+              <button type="button" className="btn btn-primary" onClick={saveAndExit}>
+                Save & exit
+              </button>
+            </div>
+          </div>
+          <div className="walkthrough">
+
+            {!reviewMode && sectionTotal > 1 ? (
+              <div className="dots-row" role="list" aria-label="Questions in this section">
+                {visibleQuestions.map((q, idx) => {
+                  const answered = isAnswered(q, answers);
+                  const visited = visitedIds.has(q.id);
+                  const state = idx === questionIndex
+                    ? "current"
+                    : answered
+                      ? "answered"
+                      : visited
+                        ? "skipped"
+                        : "unvisited";
                   return (
                     <button
+                      key={q.id}
                       type="button"
-                      key={row.section.id}
-                      className={`section-row${row.kind === "current" ? " active" : ""}${done && row.kind !== "current" ? " done" : ""}`}
-                      onClick={() => handleSectionClick(row.section)}
+                      className={`dot dot-${state}`}
+                      onClick={() => jumpToQuestion(idx)}
+                      aria-label={`Question ${idx + 1}${answered ? ", answered" : visited ? ", skipped" : ""}`}
+                      title={`Question ${idx + 1}`}
                     >
-                      <div className="section-num">
-                        {done && row.kind !== "current" ? "✓" : row.section.order}
-                      </div>
-                      <div>{row.section.title}</div>
-                      <small>
-                        {row.kind === "current"
-                          ? `${Math.min(questionIndex + 1, sectionTotal)} / ${sectionTotal || 0}`
-                          : done
-                            ? "Complete"
-                            : row.kind === "next"
-                              ? "Next"
-                              : "Later"}
-                      </small>
+                      {idx + 1}
                     </button>
                   );
                 })}
               </div>
-            </div>
-            <div className="side-footer">
-              <button type="button" onClick={() => setDrawerOpen(true)}>
-                View all {sections.length || 21} sections
-              </button>
-            </div>
-          </aside>
+            ) : null}
 
-          <div className="assessment-main">
-            <div className="walkthrough">
-              <div className="top-context">
-                <div>
-                  <div className="eyebrow">{selectedSection?.title || "Assessment"}</div>
-                  <h1>{selectedSection?.title || "Assessment"}</h1>
-                  <p>{helper}</p>
+            {reviewMode ? (
+              <section className="question-card panel review-card">
+                <div className="question-kicker">Section review</div>
+                <h2>Ready to save this section?</h2>
+                <p className="helper">
+                  {canSubmitSection
+                    ? pendingCatchup.length === 0
+                      ? "Every skipped question has been reviewed. Save this section to record your scores."
+                      : "Every required question has an answer. Save this section to record your scores."
+                    : "Answer the remaining required questions before this section can be saved."}
+                </p>
+                <div className="review-list">
+                  {visibleQuestions.map((q, idx) => {
+                    const answered = isAnswered(q, answers);
+                    const required = isRequiredQuestion(q);
+                    return (
+                      <div className="review-row" key={q.id}>
+                        <div className="review-row-num">{idx + 1}</div>
+                        <div className="review-row-text">{q.text}</div>
+                        <span
+                          className={`pill-status ${answered ? "ok" : required ? "missing" : "optional"}`}
+                        >
+                          {answered ? "Answered" : required ? "Required" : "Optional — skipped"}
+                        </span>
+                        <button type="button" className="review-jump" onClick={() => jumpToQuestion(idx)}>
+                          {answered ? "Edit" : "Answer"}
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
-                <div className="question-progress">
-                  <strong>{sectionPercent}% of section</strong>
-                  <span>{overallPercent}% overall complete</span>
+                <div className="walkthrough-footer">
+                  <div className="left-actions">
+                    <button type="button" className="btn btn-secondary" onClick={() => setReviewMode(false)}>
+                      ← Back to questions
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    disabled={!canSubmitSection || submitting}
+                    onClick={saveSection}
+                  >
+                    {submitting
+                      ? "Saving…"
+                      : isLastSection
+                        ? "Finish Assessment →"
+                        : existingSubmission
+                          ? "Save Changes →"
+                          : "Save Section →"}
+                  </button>
                 </div>
-              </div>
-
-              <section className="question-card panel">
+              </section>
+            ) : (
+              <section className={`question-card panel${catchupMode ? " catchup-card" : ""}`}>
                 {currentQuestion ? (
                   <>
                     <div className="question-kicker">{kicker}</div>
                     <h2>{currentQuestion.text}</h2>
-                    <p className="helper">{helper}</p>
+                    {helper ? <p className="helper">{helper}</p> : null}
 
                     {currentQuestion.type === "multipleChoice" && currentQuestion.options ? (
                       <div className="answers">
@@ -938,19 +1132,22 @@ export default function AssessmentUser({ setActiveView, hasAssessmentAccess = tr
                       </div>
                     ) : (
                       <textarea
+                        rows={3}
                         value={answers[currentQuestion.id] || ""}
                         onChange={(e) => handleTextAnswerChange(currentQuestion.id, e.target.value)}
                         placeholder="Optional notes"
                       />
                     )}
 
-                    <div className="mini-coach">
-                      <div className="coach-icon">i</div>
-                      <div>
-                        <strong>Why we ask this</strong>
-                        <p>{coachCopy}</p>
+                    {showCoach && coachCopy ? (
+                      <div className="mini-coach">
+                        <div className="coach-icon">i</div>
+                        <div>
+                          <strong>Why we ask this</strong>
+                          <p>{coachCopy}</p>
+                        </div>
                       </div>
-                    </div>
+                    ) : null}
 
                     <div className="walkthrough-footer">
                       <div className="left-actions">
@@ -962,9 +1159,11 @@ export default function AssessmentUser({ setActiveView, hasAssessmentAccess = tr
                         >
                           ← Back
                         </button>
-                        <button type="button" className="btn btn-secondary" onClick={saveForLater}>
-                          Save for later
-                        </button>
+                        {catchupRequired ? null : (
+                          <button type="button" className="btn btn-ghost" onClick={goSkip}>
+                            {catchupMode ? "Skip anyway" : "Skip"}
+                          </button>
+                        )}
                       </div>
                       <button
                         type="button"
@@ -984,9 +1183,9 @@ export default function AssessmentUser({ setActiveView, hasAssessmentAccess = tr
                   </>
                 )}
               </section>
-              <div className="footer-note">Your progress is saved as you move through the assessment.</div>
-            </div>
+            )}
           </div>
+        </div>
       </div>
       {drawer}
     </div>

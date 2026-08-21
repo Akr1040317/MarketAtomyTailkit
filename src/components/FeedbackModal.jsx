@@ -1,17 +1,20 @@
-import { Fragment, useState } from 'react';
-import { Dialog, Transition } from '@headlessui/react';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
-import { db } from '../firebaseConfig';
-import { toast } from './Toast';
-import { useTheme } from '../utils/theme';
-import '../assets/dashboard-preview.css';
+import { Fragment, useState } from "react";
+import { Dialog, Transition } from "@headlessui/react";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
+import { db } from "../firebaseConfig";
+import { toast } from "./Toast";
+import { useTheme } from "../utils/theme";
+import "../assets/dashboard-preview.css";
+import "../assets/client-pages.css";
+
+const RATING_LABELS = { 1: "Poor", 2: "Fair", 3: "Okay", 4: "Good", 5: "Excellent" };
 
 export default function FeedbackModal({ isOpen, onClose }) {
   const [formData, setFormData] = useState({
-    rating: '',
-    feedback: '',
-    suggestions: ''
+    rating: "",
+    feedback: "",
+    suggestions: "",
   });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -23,31 +26,31 @@ export default function FeedbackModal({ isOpen, onClose }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!user) {
-      toast('Please log in to submit feedback.');
+      toast("Please log in to submit feedback.");
       return;
     }
 
     setSubmitting(true);
     try {
-      await addDoc(collection(db, 'feedback'), {
+      await addDoc(collection(db, "feedback"), {
         userId: user.uid,
         userEmail: user.email,
         rating: formData.rating,
         feedback: formData.feedback,
         suggestions: formData.suggestions,
         submittedAt: serverTimestamp(),
-        type: 'feedback'
+        type: "feedback",
       });
 
       setSubmitted(true);
       setTimeout(() => {
         setSubmitted(false);
-        setFormData({ rating: '', feedback: '', suggestions: '' });
+        setFormData({ rating: "", feedback: "", suggestions: "" });
         onClose();
       }, 2000);
     } catch (error) {
-      console.error('Error submitting feedback:', error);
-      toast('Error submitting feedback. Please try again.');
+      console.error("Error submitting feedback:", error);
+      toast("Error submitting feedback. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -79,16 +82,26 @@ export default function FeedbackModal({ isOpen, onClose }) {
             leaveTo="opacity-0 scale-95"
           >
             <Dialog.Panel className="ma-dash mx-auto w-full max-w-lg overflow-hidden rounded-[16px]" data-theme={theme}>
-              <div className="panel" style={{ boxShadow: 'none', border: 0 }}>
-                <div className="panel-head">
+              <div className="panel" style={{ boxShadow: "none", border: 0 }}>
+                <div
+                  className="panel-head"
+                  style={{
+                    background: "linear-gradient(120deg, var(--navy), #16305c)",
+                    margin: "-1px -1px 0",
+                    borderRadius: "16px 16px 0 0",
+                    padding: "20px 24px",
+                  }}
+                >
                   <div>
-                    <Dialog.Title as="h2">Give Feedback</Dialog.Title>
-                    <p>Tell us how the Business Health Check is working for you.</p>
+                    <Dialog.Title as="h2" style={{ color: "#fff", fontFamily: "Manrope, sans-serif" }}>
+                      Give Feedback
+                    </Dialog.Title>
+                    <p style={{ color: "rgba(255,255,255,.72)" }}>Tell us how the Business Health Check is working for you.</p>
                   </div>
                 </div>
                 <div className="panel-body">
                   {submitted ? (
-                    <div className="empty" style={{ padding: '28px 8px' }}>
+                    <div className="empty" style={{ padding: "28px 8px" }}>
                       <div className="empty-icon">✓</div>
                       <h3>Thank you for your feedback!</h3>
                       <p>Your note has been saved for the MarketAtomy team.</p>
@@ -97,20 +110,21 @@ export default function FeedbackModal({ isOpen, onClose }) {
                     <form onSubmit={handleSubmit}>
                       <div className="form-group">
                         <label>How would you rate your experience?</label>
-                        <div className="rating-row">
+                        <div className="cp-rating-row">
                           {[1, 2, 3, 4, 5].map((rating) => (
-                            <label key={rating} className="radio-card" style={{ marginBottom: 0 }}>
-                              <input
-                                type="radio"
-                                name="feedback-rating"
-                                checked={formData.rating === rating.toString()}
-                                onChange={() => setFormData({ ...formData, rating: rating.toString() })}
-                              />
-                              <div>
-                                <strong>{rating}</strong>
-                                <span>{rating === 1 ? 'Poor' : rating === 5 ? 'Excellent' : ' '}</span>
-                              </div>
-                            </label>
+                            <div
+                              key={rating}
+                              className={`cp-star${formData.rating === rating.toString() ? " active" : ""}`}
+                              role="button"
+                              tabIndex={0}
+                              title={RATING_LABELS[rating]}
+                              onClick={() => setFormData({ ...formData, rating: rating.toString() })}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") setFormData({ ...formData, rating: rating.toString() });
+                              }}
+                            >
+                              {rating}
+                            </div>
                           ))}
                         </div>
                       </div>
@@ -131,7 +145,7 @@ export default function FeedbackModal({ isOpen, onClose }) {
                           placeholder="Any suggestions to make the platform better?"
                         />
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 9 }}>
+                      <div style={{ display: "flex", justifyContent: "flex-end", gap: 9 }}>
                         <button type="button" className="btn btn-secondary" onClick={onClose}>
                           Cancel
                         </button>
@@ -140,7 +154,7 @@ export default function FeedbackModal({ isOpen, onClose }) {
                           className="btn btn-primary"
                           disabled={submitting || !formData.feedback || !formData.rating}
                         >
-                          {submitting ? 'Submitting...' : 'Submit Feedback'}
+                          {submitting ? "Submitting..." : "Submit Feedback"}
                         </button>
                       </div>
                     </form>
@@ -154,4 +168,3 @@ export default function FeedbackModal({ isOpen, onClose }) {
     </Transition>
   );
 }
-

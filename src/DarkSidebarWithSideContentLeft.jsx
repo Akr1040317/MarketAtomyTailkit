@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { auth, db } from "./firebaseConfig";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, getDoc, collection, getDocs, query, where, limit } from "firebase/firestore";
@@ -46,6 +46,8 @@ export default function DarkSidebarWithSideContentLeft() {
   const [bugReportModalOpen, setBugReportModalOpen] = useState(false);
   const [hasAssessmentAccess, setHasAssessmentAccess] = useState(null);
   const [showWelcomePurchase, setShowWelcomePurchase] = useState(false);
+  const [welcomeStartAtPurchase, setWelcomeStartAtPurchase] = useState(false);
+  const confirmingPurchase = useRef(false);
 
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -93,8 +95,15 @@ export default function DarkSidebarWithSideContentLeft() {
                 )
               );
               const entitled = hasAssessmentEntitlement(userData, !resultsSnap.empty);
+              const returningFromPurchase =
+                typeof window !== "undefined" &&
+                new URLSearchParams(window.location.search).get("purchase") === "success";
               setHasAssessmentAccess(entitled);
-              if (!entitled) {
+              if (returningFromPurchase) {
+                setShowWelcomePurchase(false);
+                if (entitled) setActiveView("assessmentUser");
+              } else if (!entitled) {
+                setWelcomeStartAtPurchase(false);
                 setShowWelcomePurchase(true);
                 setActiveView("dashboard");
               } else if (userData.hideOnboarding !== true && resultsSnap.empty) {
@@ -126,30 +135,52 @@ export default function DarkSidebarWithSideContentLeft() {
     const purchase = searchParams.get("purchase");
     const sessionId = searchParams.get("session_id");
     if (!purchase) return;
+    if (purchase === "success" && !auth.currentUser) return;
+    if (confirmingPurchase.current) return;
 
-    const finish = async () => {
-      if (purchase === "success" && !auth.currentUser) return;
-      if (purchase === "success" && sessionId && auth.currentUser) {
-        try {
-          const purchased = await confirmAssessmentPurchase(sessionId);
-          if (purchased) {
-            setHasAssessmentAccess(true);
-            setShowWelcomePurchase(false);
-            setActiveView("assessmentUser");
-            toast("Purchase complete. You can begin the assessment.");
-          }
-        } catch (error) {
-          console.error("Error confirming purchase:", error);
-          toast("We could not confirm the purchase yet. Refresh in a moment or contact support.");
-        }
-      } else if (purchase === "cancel") {
-        setShowWelcomePurchase(true);
-        toast("Checkout was canceled. You can purchase when you're ready.");
-      }
+    const clearPurchaseParams = () => {
       const next = new URLSearchParams(searchParams);
       next.delete("purchase");
       next.delete("session_id");
       setSearchParams(next, { replace: true });
+    };
+
+    const finish = async () => {
+      if (purchase === "cancel") {
+        setWelcomeStartAtPurchase(true);
+        setShowWelcomePurchase(true);
+        toast("Checkout was canceled. You can purchase when you're ready.");
+        clearPurchaseParams();
+        return;
+      }
+
+      if (purchase !== "success" || !sessionId || !auth.currentUser) return;
+
+      confirmingPurchase.current = true;
+      setShowWelcomePurchase(false);
+      try {
+        let purchased = false;
+        for (let attempt = 0; attempt < 5 && !purchased; attempt += 1) {
+          purchased = await confirmAssessmentPurchase(sessionId);
+          if (!purchased) {
+            await new Promise((resolve) => setTimeout(resolve, 900 * (attempt + 1)));
+          }
+        }
+        if (purchased) {
+          setHasAssessmentAccess(true);
+          setShowWelcomePurchase(false);
+          setActiveView("assessmentUser");
+          toast("Purchase complete. You can begin the assessment.");
+          clearPurchaseParams();
+        } else {
+          toast("We're still confirming your payment. Refresh in a moment if the assessment stays locked.");
+        }
+      } catch (error) {
+        console.error("Error confirming purchase:", error);
+        toast("We could not confirm the purchase yet. Refresh in a moment or contact support.");
+      } finally {
+        confirmingPurchase.current = false;
+      }
     };
 
     finish();
@@ -158,10 +189,17 @@ export default function DarkSidebarWithSideContentLeft() {
   const requestView = (view) => {
     const lockedViews = ["assessmentUser", "reports", "actionPlan"];
     if (hasAssessmentAccess === false && !isAdminMode && lockedViews.includes(view)) {
-      setShowWelcomePurchase(true);
+      setWelcomeStartAtPurchase(true);
+      setActiveView(view);
+      toast("This area is locked until you purchase the assessment.");
       return;
     }
     setActiveView(view);
+  };
+
+  const openPurchase = (atPurchase = true) => {
+    setWelcomeStartAtPurchase(atPurchase);
+    setShowWelcomePurchase(true);
   };
 
   // Logout function with redirection to login page
@@ -180,27 +218,41 @@ export default function DarkSidebarWithSideContentLeft() {
       <AssessmentUser
         setActiveView={requestView}
         hasAssessmentAccess={hasAssessmentAccess}
-        onRequestPurchase={() => setShowWelcomePurchase(true)}
+        onRequestPurchase={() => openPurchase(true)}
       />
     ) : activeView === "reports" ? (
-      <Reports setActiveView={requestView} />
+      <Reports
+        setActiveView={requestView}
+        hasAssessmentAccess={hasAssessmentAccess}
+        onRequestPurchase={() => openPurchase(true)}
+      />
     ) : activeView === "actionPlan" ? (
-      <ActionPlan setActiveView={requestView} />
+      <ActionPlan
+        setActiveView={requestView}
+        hasAssessmentAccess={hasAssessmentAccess}
+        onRequestPurchase={() => openPurchase(true)}
+      />
     ) : activeView === "resources" ? (
       <Resources
         hasAssessmentAccess={hasAssessmentAccess}
-        onRequestPurchase={() => setShowWelcomePurchase(true)}
+        onRequestPurchase={() => openPurchase(true)}
       />
     ) : activeView === "bugReport" ? (
       <BugReportPage />
     ) : activeView === "onboarding" ? (
-      <OnboardingPage setActiveView={requestView} firstName={firstName} lastName={lastName} />
+      <OnboardingPage
+        setActiveView={requestView}
+        firstName={firstName}
+        lastName={lastName}
+        hasAssessmentAccess={hasAssessmentAccess}
+        onRequestPurchase={() => openPurchase(true)}
+      />
     ) : (
       <Dashboard
         setActiveView={requestView}
         viewMode="client"
         hasAssessmentAccess={hasAssessmentAccess}
-        onRequestPurchase={() => setShowWelcomePurchase(true)}
+        onRequestPurchase={() => openPurchase(true)}
       />
     );
 
@@ -245,6 +297,7 @@ export default function DarkSidebarWithSideContentLeft() {
         <WelcomePurchaseModal
           open={hasAssessmentAccess === false && showWelcomePurchase}
           firstName={firstName}
+          startAtPurchase={welcomeStartAtPurchase}
           onClose={() => setShowWelcomePurchase(false)}
           onBrowseResources={() => {
             setShowWelcomePurchase(false);

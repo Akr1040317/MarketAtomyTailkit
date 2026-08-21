@@ -3,39 +3,56 @@ import { getAuth } from "firebase/auth";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../firebaseConfig";
 import { toast } from "./Toast";
+import "../assets/client-pages.css";
 
 const STEPS = [
   [
+    "1",
     "Diagnose 5 business systems",
     "The Business Health Check helps you build an honest baseline across the major systems that shape business health. You can complete it over multiple sessions.",
   ],
   [
+    "2",
     "How scoring works",
     "Answer honestly. Health is shown as Needs Attention, Needs Tweaking, or Healthy. These labels are guidance for where to focus, not a school grade.",
   ],
   [
+    "3",
     "How to take the assessment",
     "There are 21 sections. Save one section at a time, come back later, and review completed sections. Production is skipped when it does not apply.",
   ],
   [
+    "4",
     "What you get",
     "Your dashboard includes scores, a full report, PDF export, recommended resources, and an optional coach debrief.",
   ],
   [
+    "5",
     "Confirm your profile",
     "Before starting, confirm your name so your report reflects the right information.",
   ],
   [
+    "✓",
     "You are ready",
     "Start the first assessment section now, or explore the dashboard first.",
   ],
 ];
 
-export default function OnboardingPage({ setActiveView, firstName, lastName }) {
+export default function OnboardingPage({
+  setActiveView,
+  firstName,
+  lastName,
+  hasAssessmentAccess = true,
+  onRequestPurchase,
+}) {
   const [step, setStep] = useState(0);
   const [dontShowAgain, setDontShowAgain] = useState(false);
   const user = getAuth().currentUser;
-  const [title, copy] = STEPS[step];
+  const [icon, title, defaultCopy] = STEPS[step];
+  const copy =
+    step === STEPS.length - 1 && hasAssessmentAccess === false
+      ? "Purchase the assessment to begin, or browse free Help Center resources if you are not ready to buy yet."
+      : defaultCopy;
 
   const persistHide = async () => {
     if (!dontShowAgain || !user) return;
@@ -57,6 +74,10 @@ export default function OnboardingPage({ setActiveView, firstName, lastName }) {
       return;
     }
     await persistHide();
+    if (hasAssessmentAccess === false) {
+      onRequestPurchase?.();
+      return;
+    }
     toast("Welcome. Your first assessment section is ready.");
     setActiveView("assessmentUser");
   };
@@ -74,19 +95,12 @@ export default function OnboardingPage({ setActiveView, firstName, lastName }) {
       </div>
       <section className="panel">
         <div className="panel-body" style={{ padding: 32 }}>
-          <div style={{ display: "flex", gap: 7, marginBottom: 24 }}>
+          <div className="cp-stepper">
             {STEPS.map((_, index) => (
-              <span
-                key={index}
-                style={{
-                  width: index === step ? 28 : 8,
-                  height: 7,
-                  borderRadius: 99,
-                  background: index <= step ? "#2E6BB0" : "#E2E7ED",
-                }}
-              />
+              <span key={index} className={index === step ? "active" : index < step ? "done" : "todo"} />
             ))}
           </div>
+          <div className="cp-step-icon">{icon}</div>
           <span className="pill info">
             Step {step + 1} of {STEPS.length}
           </span>
@@ -118,8 +132,17 @@ export default function OnboardingPage({ setActiveView, firstName, lastName }) {
                 <span className="muted">Don't show again</span>
               </label>
               <button type="button" className="btn btn-primary" onClick={next}>
-                {step === STEPS.length - 1 ? "Start Assessment" : "Next"}
+                {step === STEPS.length - 1
+                  ? hasAssessmentAccess === false
+                    ? "Purchase assessment"
+                    : "Start Assessment"
+                  : "Next"}
               </button>
+              {step === STEPS.length - 1 && hasAssessmentAccess === false ? (
+                <button type="button" className="btn btn-secondary" onClick={() => setActiveView("resources")}>
+                  Don’t want to purchase? Check out our free resources
+                </button>
+              ) : null}
             </div>
           </div>
         </div>

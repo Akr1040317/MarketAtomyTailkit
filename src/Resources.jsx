@@ -5,6 +5,7 @@ import { db } from "./firebaseConfig";
 import { processComputedScores } from "./utils/analytics";
 import { getCategoryReport, getFreeLibraryResources } from "./utils/reportContent";
 import { getResourceCoverImage } from "./utils/resourceImages";
+import "./assets/client-pages.css";
 
 const FILTERS = [
   { value: "all", label: "All categories" },
@@ -55,6 +56,13 @@ const CATEGORY_PILL = {
   foundationalStructure: { label: "Foundational Structure", cls: "info" },
   general: { label: "Overall Health", cls: "info" },
 };
+
+function resourceIcon(card) {
+  if (card.type === "video") return "▶";
+  if (card.type === "program") return "◧";
+  if (card.href && card.href.includes("calendly")) return "◔";
+  return "▤";
+}
 
 export default function Resources({ hasAssessmentAccess = true, onRequestPurchase }) {
   const [enhancedScores, setEnhancedScores] = useState(null);
@@ -139,21 +147,26 @@ export default function Resources({ hasAssessmentAccess = true, onRequestPurchas
           <h1>Help Center</h1>
           <p>
             {hasAssessmentAccess === false
-              ? "Free guides, worksheets, videos, and Academy resources you can use now. The assessment, report, and action plan stay locked until you purchase."
+              ? "Free guides, worksheets, videos, and Academy resources you can use now."
               : "Recommended guides, worksheets, videos, MarketAtomy Academy resources, and consultation options based on your assessment."}
           </p>
         </div>
-        <div style={{ display: "flex", gap: 9, flexWrap: "wrap" }}>
-          {hasAssessmentAccess === false ? (
-            <button type="button" className="btn btn-primary" onClick={onRequestPurchase}>
-              Unlock assessment — $297
-            </button>
-          ) : null}
-          <a className="btn btn-secondary" href="https://marketatomy.academy" target="_blank" rel="noreferrer">
-            Open MarketAtomy Academy
-          </a>
-        </div>
+        <a className="btn btn-secondary" href="https://marketatomy.academy" target="_blank" rel="noreferrer">
+          Open MarketAtomy Academy
+        </a>
       </div>
+
+      {hasAssessmentAccess === false ? (
+        <div className="cp-locked">
+          <div>
+            <strong>Assessment, report, and action plan are locked</strong>
+            <p>Unlock the full Business Health Check with a one-time purchase to see your scores and priorities.</p>
+          </div>
+          <button type="button" className="btn btn-primary" onClick={onRequestPurchase}>
+            Unlock assessment — $297
+          </button>
+        </div>
+      ) : null}
 
       <section className="panel" style={{ marginBottom: 20 }}>
         <div className="panel-body">
@@ -177,7 +190,7 @@ export default function Resources({ hasAssessmentAccess = true, onRequestPurchas
 
       <div className="grid-3">
         {cards.map((card) => (
-          <article className="panel resource-card" key={card.title}>
+          <article className="panel resource-card cp-resource" key={card.title}>
             <img
               className="resource-cover"
               src={getResourceCoverImage({
@@ -190,8 +203,11 @@ export default function Resources({ hasAssessmentAccess = true, onRequestPurchas
               alt=""
               loading="lazy"
             />
-            <div className="panel-body">
-              <span className={`pill ${card.pillClass}`}>{card.pill}</span>
+            <div className="panel-body" style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+              <div className="cp-resource-top">
+                <div className="cp-resource-icon">{resourceIcon(card)}</div>
+                <span className={`pill ${card.pillClass}`}>{card.pill}</span>
+              </div>
               <h3>{card.title}</h3>
               <p>{card.description}</p>
               {card.href ? (
@@ -204,6 +220,13 @@ export default function Resources({ hasAssessmentAccess = true, onRequestPurchas
             </div>
           </article>
         ))}
+        {cards.length === 0 ? (
+          <div className="empty" style={{ gridColumn: "1 / -1" }}>
+            <div className="empty-icon">▤</div>
+            <h3>No resources match that search</h3>
+            <p>Try a different keyword or clear the category filter.</p>
+          </div>
+        ) : null}
       </div>
     </div>
   );

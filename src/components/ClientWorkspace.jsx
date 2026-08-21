@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getAuth } from "firebase/auth";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "../firebaseConfig";
@@ -16,6 +16,25 @@ const CLIENT_NAV = [
   { id: "resources", label: "Help Center" },
 ];
 
+function readKey(uid) {
+  return `ma-notif-read:${uid}`;
+}
+
+function loadReadIds(uid) {
+  if (!uid || typeof window === "undefined") return new Set();
+  try {
+    const raw = window.localStorage.getItem(readKey(uid));
+    return new Set(raw ? JSON.parse(raw) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveReadIds(uid, ids) {
+  if (!uid || typeof window === "undefined") return;
+  window.localStorage.setItem(readKey(uid), JSON.stringify([...ids]));
+}
+
 export default function ClientWorkspace({
   activeView,
   setActiveView,
@@ -30,7 +49,12 @@ export default function ClientWorkspace({
 }) {
   const [completion, setCompletion] = useState(null);
   const [tourOpen, setTourOpen] = useState(false);
+  const [readIds, setReadIds] = useState(() => new Set());
   const user = getAuth().currentUser;
+
+  useEffect(() => {
+    setReadIds(loadReadIds(user?.uid));
+  }, [user?.uid]);
 
   useEffect(() => {
     const load = async () => {
@@ -56,12 +80,61 @@ export default function ClientWorkspace({
 
   const navItems = CLIENT_NAV.map((item) => ({
     ...item,
-    locked: hasAssessmentAccess === false && ["assessmentUser", "reports", "actionPlan"].includes(item.id),
+    locked: hasAssessmentAccess === false && ["dashboard", "assessmentUser", "reports", "actionPlan"].includes(item.id),
     badge:
       item.badgeKey === "progress" && completion && hasAssessmentAccess !== false
         ? `${completion.percent}%`
         : undefined,
   }));
+
+  const notifications = useMemo(() => {
+    const items = [];
+    if (hasAssessmentAccess === false) {
+      items.push({
+        id: "unlock",
+        title: "Unlock the assessment",
+        body: "The Business Health Check is $297 one time. Help Center resources are free to browse now.",
+        view: "dashboard",
+      });
+    } else if (completion?.percent === 100) {
+      items.push({
+        id: "report-ready",
+        title: "Your report is ready",
+        body: "All sections are complete. Review your scores and recommended next steps.",
+        view: "reports",
+      });
+      items.push({
+        id: "action-plan",
+        title: "Review your action plan",
+        body: "Turn your lowest-scoring areas into prioritized follow-up work.",
+        view: "actionPlan",
+      });
+    } else if (completion) {
+      const left = Math.max((completion.total || 0) - (completion.done || 0), 0);
+      items.push({
+        id: "continue",
+        title: "Continue your assessment",
+        body: left === 1 ? "One section left to finish your scores." : `${left} sections left to finish your full report.`,
+        view: "assessmentUser",
+      });
+    }
+    items.push({
+      id: "help",
+      title: "Help Center is open",
+      body: "Guides, worksheets, and videos are available whenever you need them.",
+      view: "resources",
+    });
+    return items.map((item) => ({ ...item, unread: !readIds.has(item.id) }));
+  }, [completion, hasAssessmentAccess, readIds]);
+
+  const markRead = (item) => {
+    setReadIds((current) => {
+      const next = new Set(current);
+      next.add(item.id);
+      saveReadIds(user?.uid, next);
+      return next;
+    });
+  };
 
   const menuActions = [
     ...(canSwitchAdmin && onSwitchAdmin
@@ -76,20 +149,15 @@ export default function ClientWorkspace({
     <>
       <WorkspaceChrome
         scopeClass="ma-dash"
-        tagline="Business Health Check"
+        brandName="Business Health Check"
         navItems={navItems}
         activeView={activeView}
         onNavigate={setActiveView}
         firstName={firstName}
         lastName={lastName}
         profileRole="Client workspace"
-        profileMeta={
-          hasAssessmentAccess === false
-            ? "Help Center open"
-            : completion
-              ? `${completion.percent}% complete`
-              : null
-        }
+        notifications={notifications}
+        onNotificationClick={markRead}
         onStartWalkthrough={() => setTourOpen(true)}
         walkthroughLabel="Guided walkthrough"
         menuActions={menuActions}

@@ -3,6 +3,7 @@ import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { db } from "../firebaseConfig";
 import { toast } from "./Toast";
+import "../assets/client-pages.css";
 
 const EMPTY = {
   title: "",
@@ -12,6 +13,13 @@ const EMPTY = {
   actualBehavior: "",
   severity: "medium",
 };
+
+const SEVERITY_OPTIONS = [
+  { value: "low", label: "Low", hint: "Minor, no impact" },
+  { value: "medium", label: "Medium", hint: "Affects some use" },
+  { value: "high", label: "High", hint: "Significant impact" },
+  { value: "critical", label: "Critical", hint: "Blocks core use" },
+];
 
 export default function BugReportPage() {
   const [formData, setFormData] = useState(EMPTY);
@@ -60,6 +68,7 @@ export default function BugReportPage() {
       <form className="panel form-page" onSubmit={handleSubmit}>
         <div className="panel-head">
           <div>
+            <div className="cp-form-icon">🛠</div>
             <h2>Bug Details</h2>
             <p>Please provide enough detail to reproduce the problem.</p>
           </div>
@@ -112,16 +121,23 @@ export default function BugReportPage() {
           </div>
           <div className="form-group">
             <label>Severity</label>
-            <select
-              required
-              value={formData.severity}
-              onChange={(e) => setFormData({ ...formData, severity: e.target.value })}
-            >
-              <option value="low">Low - Minor issue, does not affect functionality</option>
-              <option value="medium">Medium - Affects some functionality</option>
-              <option value="high">High - Significantly impacts usage</option>
-              <option value="critical">Critical - Blocks core functionality</option>
-            </select>
+            <div className="cp-severity-row">
+              {SEVERITY_OPTIONS.map((option) => (
+                <div
+                  key={option.value}
+                  className={`cp-severity-option ${option.value}${formData.severity === option.value ? " active" : ""}`}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setFormData({ ...formData, severity: option.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") setFormData({ ...formData, severity: option.value });
+                  }}
+                >
+                  <strong>{option.label}</strong>
+                  <span>{option.hint}</span>
+                </div>
+              ))}
+            </div>
           </div>
           <div className="form-actions">
             <button className="btn btn-primary" type="submit" disabled={submitting || !formData.title || !formData.description}>

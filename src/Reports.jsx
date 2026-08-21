@@ -5,6 +5,8 @@ import { db } from "./firebaseConfig";
 import { getHealthLevelLabel, processComputedScores } from "./utils/analytics";
 import { generateActionItems, getCategoryReport } from "./utils/reportContent";
 import { toast } from "./components/Toast";
+import "./assets/client-pages.css";
+import LockedFeature from "./components/LockedFeature";
 
 const CATEGORIES = {
   foundationalStructure: "Foundational Structure",
@@ -13,10 +15,18 @@ const CATEGORIES = {
   productService: "Product Viability",
 };
 
+const CATEGORY_ICON = {
+  foundationalStructure: "FS",
+  financialPosition: "FIN",
+  salesMarketing: "S&M",
+  productService: "PV",
+};
+
 const PILL = { high: "healthy", medium: "tweak", low: "attention" };
+const ICON_CLASS = { high: "healthy", medium: "tweak", low: "attention" };
 const BAR = { high: "var(--healthy)", medium: "#D4A70E", low: "var(--attention)" };
 
-export default function Reports({ setActiveView }) {
+export default function Reports({ setActiveView, hasAssessmentAccess = true, onRequestPurchase }) {
   const [enhancedScores, setEnhancedScores] = useState(null);
   const [loading, setLoading] = useState(true);
   const user = getAuth().currentUser;
@@ -53,6 +63,17 @@ export default function Reports({ setActiveView }) {
     toast("PDF export started.");
   };
 
+  if (hasAssessmentAccess === false) {
+    return (
+      <LockedFeature
+        title="My Report"
+        body="Your scores and written report stay locked until you purchase the assessment."
+        onRequestPurchase={onRequestPurchase}
+        onBrowseResources={() => setActiveView?.("resources")}
+      />
+    );
+  }
+
   if (loading) {
     return (
       <div className="page">
@@ -84,6 +105,7 @@ export default function Reports({ setActiveView }) {
   }
 
   const overallPct = Math.round(overall.percentage || 0);
+  const overallLevel = overall.healthLevel || "medium";
 
   return (
     <div className="page">
@@ -102,37 +124,33 @@ export default function Reports({ setActiveView }) {
         </div>
       </div>
 
-      <section className="panel hero-panel" style={{ marginBottom: 20 }}>
-        <div className="panel-body" style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: 24, alignItems: "center" }}>
-          <div
-            style={{
-              width: 108,
-              height: 108,
-              borderRadius: "50%",
-              display: "grid",
-              placeItems: "center",
-              background: `conic-gradient(var(--cyan) 0 ${overallPct}%, rgba(255,255,255,.09) ${overallPct}%)`,
-            }}
-          >
-            <div style={{ width: 84, height: 84, borderRadius: "50%", background: "#12223A", display: "grid", placeItems: "center", textAlign: "center" }}>
-              <strong style={{ font: "800 26px Manrope" }}>{overallPct}%</strong>
-            </div>
+      <section className="cp-hero" style={{ marginBottom: 22 }}>
+        <div
+          className="cp-gauge"
+          style={{
+            background: `conic-gradient(${BAR[overallLevel]} 0 ${overallPct}%, rgba(255,255,255,.12) ${overallPct}%)`,
+          }}
+        >
+          <div className="cp-gauge-inner">
+            <strong>{overallPct}%</strong>
+            <span>Overall</span>
           </div>
-          <div>
-            <span className={`pill ${PILL[overall.healthLevel] || "tweak"}`}>
-              {getHealthLevelLabel(overall.healthLevel).label}
-            </span>
-            <h2 style={{ fontFamily: "Manrope", margin: "9px 0 7px" }}>
-              {actionItems.length > 0
-                ? "Your business has a solid base with several important growth constraints."
-                : overall.healthLevel === "high"
-                  ? "Your business shows strong health across the major systems."
-                  : "Your results are starting to show a clearer picture of the business."}
-            </h2>
-            <p className="category-copy" style={{ margin: 0, maxWidth: 770 }}>
-              Current results are based on the sections you have completed. Use the category cards below and your action plan to decide where attention will create the most value.
-            </p>
-          </div>
+        </div>
+        <div className="cp-hero-body">
+          <span className={`pill ${PILL[overallLevel] || "tweak"}`}>
+            {getHealthLevelLabel(overallLevel).label}
+          </span>
+          <h2>
+            {actionItems.length > 0
+              ? "Your business has a solid base with several important growth constraints."
+              : overallLevel === "high"
+                ? "Your business shows strong health across the major systems."
+                : "Your results are starting to show a clearer picture of the business."}
+          </h2>
+          <p>
+            Current results are based on the sections you have completed. Use the category cards below and your
+            action plan to decide where attention will create the most value.
+          </p>
         </div>
       </section>
 
@@ -145,9 +163,14 @@ export default function Reports({ setActiveView }) {
           return (
             <section className="panel" key={key}>
               <div className="panel-head">
-                <div>
-                  <h2>{label}</h2>
-                  <p>Current category result</p>
+                <div className="cp-cat-head">
+                  <div className={`cp-cat-icon ${analytics ? ICON_CLASS[level] : "info"}`}>
+                    {CATEGORY_ICON[key]}
+                  </div>
+                  <div>
+                    <h2 style={{ margin: 0 }}>{label}</h2>
+                    <p style={{ margin: "2px 0 0" }}>Current category result</p>
+                  </div>
                 </div>
                 {analytics ? (
                   <span className={`pill ${PILL[level]}`}>{getHealthLevelLabel(level).label}</span>
@@ -156,7 +179,7 @@ export default function Reports({ setActiveView }) {
                 )}
               </div>
               <div className="panel-body">
-                <div className="report-score">{analytics ? `${pct}%` : "—"}</div>
+                <div className="cp-cat-score">{analytics ? `${pct}%` : "—"}</div>
                 <div className="progress" style={{ margin: "8px 0 14px" }}>
                   <span style={{ width: `${analytics ? pct : 0}%`, background: BAR[level] }} />
                 </div>
@@ -179,20 +202,27 @@ export default function Reports({ setActiveView }) {
             Open Action Plan →
           </button>
         </div>
-        <div className="panel-body grid-3">
+        <div className="panel-body">
           {actionItems.length > 0 ? (
             actionItems.slice(0, 3).map((item, index) => (
-              <div className="callout" key={item.category}>
-                <strong>{index + 1}. {CATEGORIES[item.category] || item.category}</strong>
-                <br />
-                Review this system and the recommended resources in your action plan.
+              <div className="cp-priority attention" key={item.category}>
+                <div className="cp-priority-num">{index + 1}</div>
+                <div>
+                  <h3>{CATEGORIES[item.category] || item.category}</h3>
+                  <p>Review this system and the recommended resources in your action plan.</p>
+                </div>
+                <button type="button" className="btn btn-secondary" onClick={() => setActiveView?.("actionPlan")}>
+                  View
+                </button>
               </div>
             ))
           ) : (
-            <div className="callout">
-              <strong>Keep going</strong>
-              <br />
-              Finish remaining sections before treating the current report as final.
+            <div className="cp-priority info">
+              <div className="cp-priority-num">✓</div>
+              <div>
+                <h3>Keep going</h3>
+                <p>Finish remaining sections before treating the current report as final.</p>
+              </div>
             </div>
           )}
         </div>

@@ -13,12 +13,45 @@ const CATEGORIES = {
   general: "Overall Health",
 };
 
-const PILL = { high: "healthy", medium: "tweak", low: "attention" };
-
 function greeting(firstName) {
   const hour = new Date().getHours();
   const hello = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   return `${hello}, ${firstName || "there"}.`;
+}
+
+function gaugeColor(level) {
+  if (level === "high") return "var(--cyan)";
+  if (level === "medium") return "var(--yellow)";
+  return "var(--orange)";
+}
+
+function statusClass(level) {
+  if (level === "high") return "dash-status-good";
+  if (level === "medium") return "dash-status-tweak";
+  return "dash-status-attention";
+}
+
+function resourceIcon(resource) {
+  const hay = `${resource.type || ""} ${resource.title || ""}`.toLowerCase();
+  if (hay.includes("video") || hay.includes("webinar")) return { kind: "video", mark: "▶" };
+  if (hay.includes("podcast")) return { kind: "guide", mark: "🎙" };
+  return { kind: "guide", mark: "📘" };
+}
+
+function Gauge({ percent, tone }) {
+  const value = Math.max(0, Math.min(100, Number.isFinite(percent) ? percent : 0));
+  const color = gaugeColor(tone);
+  return (
+    <div className="dash-gauge" aria-hidden="true">
+      <div
+        className="dash-gauge-track"
+        style={{ background: `conic-gradient(${color} 0% ${value}%, var(--gauge-rest) ${value}% 100%)` }}
+      />
+      <div className="dash-gauge-face">
+        <span className="dash-gauge-num">{Number.isFinite(percent) ? `${Math.round(value)}%` : "—"}</span>
+      </div>
+    </div>
+  );
 }
 
 export default function Dashboard({ setActiveView, hasAssessmentAccess = true, onRequestPurchase }) {
@@ -61,9 +94,11 @@ export default function Dashboard({ setActiveView, hasAssessmentAccess = true, o
 
   const percent = totalSections > 0 ? Math.round((completedSections.length / totalSections) * 100) : 0;
   const complete = totalSections > 0 && completedSections.length === totalSections;
+  const overall = analyticsFor("general");
+  const overallPct = overall?.percentage != null ? Math.round(overall.percentage) : null;
   const actionItems = enhancedScores ? generateActionItems(enhancedScores) : [];
   const resources = unpaid
-    ? getFreeLibraryResources().slice(0, 3)
+    ? getFreeLibraryResources().slice(0, 2)
     : enhancedScores
       ? getRecommendedResources(enhancedScores).slice(0, 2)
       : [];
@@ -75,11 +110,13 @@ export default function Dashboard({ setActiveView, hasAssessmentAccess = true, o
           title: "Browse free Help Center resources",
           body: "Read guides, worksheets, and videos while the assessment stays locked.",
           view: "resources",
+          cta: "Open",
         },
         {
           title: "Unlock the Business Health Check",
           body: "Purchase the one-time $297 assessment when you are ready to begin.",
           view: "purchase",
+          cta: "Buy",
         },
       ]
     : [];
@@ -89,6 +126,7 @@ export default function Dashboard({ setActiveView, hasAssessmentAccess = true, o
         title: remaining === 1 ? "Finish the last assessment section" : `Finish remaining ${remaining} assessment sections`,
         body: "Continue building your baseline so scores and recommendations become more complete.",
         view: "assessmentUser",
+        cta: "Continue",
       });
     }
     actionItems.slice(0, 2).forEach((item) => {
@@ -96,6 +134,7 @@ export default function Dashboard({ setActiveView, hasAssessmentAccess = true, o
         title: `Focus on ${CATEGORIES[item.category] || item.category}`,
         body: "This is currently one of your lowest health areas.",
         view: "actionPlan",
+        cta: "Start",
       });
     });
     if (nextSteps.length < 3) {
@@ -103,6 +142,7 @@ export default function Dashboard({ setActiveView, hasAssessmentAccess = true, o
         title: "Review your Action Plan",
         body: "Turn current findings into prioritized follow-up work.",
         view: "actionPlan",
+        cta: "Open",
       });
     }
   }
@@ -123,38 +163,37 @@ export default function Dashboard({ setActiveView, hasAssessmentAccess = true, o
         { label: "Review action plan", done: false },
         { label: "Download a resource", done: false },
       ];
+  const checklistDone = checklist.filter((row) => row.done).length;
 
   return (
-    <div className="page">
+    <div className="page dash-home">
       <div className="page-head">
         <div>
           <h1>{greeting(firstName)}</h1>
           <p>
             {unpaid
               ? "Your assessment is locked until you purchase. You can still read free Help Center resources anytime."
-              : "Your business health snapshot, current assessment progress, and next recommended actions."}
+              : "Here's your business health snapshot, current assessment progress, and next recommended actions."}
           </p>
-        </div>
-        <span className="meta-soft">
-          {lastUpdated
-            ? `Last updated ${lastUpdated.toLocaleString("en-US", {
+          {lastUpdated ? (
+            <p className="dash-updated">
+              Scores last updated {lastUpdated.toLocaleString("en-US", {
                 month: "long",
                 day: "numeric",
                 year: "numeric",
                 hour: "numeric",
                 minute: "2-digit",
-              })}`
-            : unpaid
-              ? "Assessment locked · Help Center is open"
-              : "Complete a section to start your baseline"}
-        </span>
+              })}
+            </p>
+          ) : null}
+        </div>
       </div>
 
-      <section className="panel hero-panel">
-        <div className="panel-body" style={{ padding: "25px 26px" }}>
-          <span className="pill" style={{ background: "rgba(245,196,0,.12)", color: "#F5D33E" }}>
+      <section className="dash-hero">
+        <div className="dash-hero-left">
+          <div className="dash-hero-badge">
             {unpaid ? "Assessment locked" : complete ? "Assessment complete" : "Assessment in progress"}
-          </span>
+          </div>
           <h2>
             {unpaid
               ? "Purchase to begin the Business Health Check"
@@ -168,38 +207,51 @@ export default function Dashboard({ setActiveView, hasAssessmentAccess = true, o
                 : "Continue building your baseline. Scores and recommendations become more complete as you finish additional sections."}
           </p>
           {!unpaid ? (
-            <>
-              <div className="meta-soft" style={{ display: "flex", justifyContent: "space-between", margin: "18px 0 6px" }}>
+            <div className="dash-progress">
+              <div className="dash-progress-label">
                 <span>Overall progress</span>
-                <strong style={{ color: "#fff" }}>{percent}%</strong>
+                <span>{percent}%</span>
               </div>
-              <div className="progress" style={{ background: "rgba(255,255,255,.08)" }}>
+              <div className="dash-progress-track">
                 <span style={{ width: `${percent}%` }} />
               </div>
-            </>
+            </div>
           ) : null}
-          <div style={{ display: "flex", gap: 9, marginTop: 18, flexWrap: "wrap" }}>
+          <div className="dash-hero-actions">
             <button
               type="button"
               className="btn btn-primary"
               onClick={() => (unpaid ? onRequestPurchase?.() : setActiveView("assessmentUser"))}
             >
-              {unpaid ? "Purchase assessment — $297" : complete ? "Review Assessment" : "Continue Assessment"}
+              {unpaid ? "Assessment locked" : complete ? "Review Assessment" : "Continue Assessment"}
             </button>
             <button
               type="button"
-              className="btn btn-secondary"
+              className="dash-btn-ghost"
               onClick={() => setActiveView(unpaid ? "resources" : "reports")}
             >
               {unpaid ? "Browse free resources" : "View Current Report"}
             </button>
           </div>
         </div>
+        <div className="dash-hero-right">
+          <div
+            className="dash-big-gauge"
+            style={{
+              background: `conic-gradient(var(--orange) 0% ${overallPct || 0}%, rgba(255,255,255,.12) ${overallPct || 0}% 100%)`,
+            }}
+          >
+            <div className="dash-big-gauge-inner">
+              <div className="num">{unpaid || overallPct == null ? "—" : `${overallPct}%`}</div>
+              <div className="lbl">Overall Health</div>
+            </div>
+          </div>
+        </div>
       </section>
 
-      <div className="grid-main">
+      <div className="dash-layout">
         <div>
-          <section className="panel" style={{ marginBottom: 20 }}>
+          <section className="panel dash-panel">
             <div className="panel-head">
               <div>
                 <h2>{unpaid ? "Locked until purchase" : "Your Business Health"}</h2>
@@ -213,34 +265,37 @@ export default function Dashboard({ setActiveView, hasAssessmentAccess = true, o
             </div>
             <div className="panel-body">
               {unpaid ? (
-                <div className="callout">
-                  <strong>Scores are part of the paid assessment</strong>
-                  <br />
-                  Until you purchase, you can still read free Help Center resources and come back to unlock the diagnostic anytime.
+                <div className="dash-todo">
+                  <div className="dash-todo-num">$</div>
+                  <div>
+                    <strong>Scores are part of the paid assessment</strong>
+                    <span>Until you purchase, you can still read free Help Center resources and come back to unlock the diagnostic anytime.</span>
+                  </div>
                 </div>
               ) : (
-              <div className="grid-3">
-                {Object.keys(CATEGORIES).map((key) => {
-                  const analytics = analyticsFor(key);
-                  const level = analytics?.healthLevel;
-                  return (
-                    <div className="callout" key={key}>
-                      <strong>{CATEGORIES[key]}</strong>
-                      <div className="score-num">{analytics ? `${Math.round(analytics.percentage || 0)}%` : "—"}</div>
-                      {level ? (
-                        <span className={`pill ${PILL[level] || "tweak"}`}>{getHealthLevelLabel(level).label}</span>
-                      ) : (
-                        <span className="pill info">Not scored</span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                <div className="dash-cat-grid">
+                  {Object.keys(CATEGORIES).map((key) => {
+                    const analytics = analyticsFor(key);
+                    const level = analytics?.healthLevel;
+                    const value = analytics?.percentage != null ? Math.round(analytics.percentage) : null;
+                    return (
+                      <div className="dash-cat-card" key={key}>
+                        <Gauge percent={value} tone={level} />
+                        <div className="dash-cat-name">{CATEGORIES[key]}</div>
+                        {level ? (
+                          <span className={`dash-status ${statusClass(level)}`}>{getHealthLevelLabel(level).label}</span>
+                        ) : (
+                          <span className="dash-status dash-status-empty">Not scored</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
           </section>
 
-          <section className="panel">
+          <section className="panel dash-panel">
             <div className="panel-head">
               <div>
                 <h2>What to Do Next</h2>
@@ -248,41 +303,55 @@ export default function Dashboard({ setActiveView, hasAssessmentAccess = true, o
               </div>
             </div>
             <div className="panel-body">
-              {nextSteps.slice(0, 3).map((step, index) => (
-                <button
-                  type="button"
-                  className="callout"
-                  key={step.title}
-                  style={{ marginTop: index ? 9 : 0, display: "block", width: "100%", textAlign: "left" }}
-                  onClick={() => (step.view === "purchase" ? onRequestPurchase?.() : setActiveView(step.view))}
-                >
-                  <strong>{index + 1}. {step.title}</strong>
-                  <br />
-                  {step.body}
-                </button>
-              ))}
+              <div className="dash-todo-list">
+                {nextSteps.slice(0, 3).map((step, index) => (
+                  <button
+                    type="button"
+                    className="dash-todo"
+                    key={step.title}
+                    onClick={() => (step.view === "purchase" ? onRequestPurchase?.() : setActiveView(step.view))}
+                  >
+                    <div className="dash-todo-num">{index + 1}</div>
+                    <div className="dash-todo-body">
+                      <strong>{step.title}</strong>
+                      <span>{step.body}</span>
+                    </div>
+                    <span className="dash-todo-cta">{step.cta || "Open"} →</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </section>
         </div>
 
         <aside>
-          <section className="panel" style={{ marginBottom: 20 }}>
+          <section className="panel dash-panel">
             <div className="panel-head">
               <div>
                 <h2>BHC Checklist</h2>
                 <p>Your progress through the full experience.</p>
               </div>
             </div>
-            <div className="panel-body" style={{ display: "grid", gap: 9 }}>
-              {checklist.map((row) => (
-                <div className="checklist-row" key={row.label}>
-                  {row.done ? "✓" : row.current ? "◉" : "○"} {row.label}
-                </div>
-              ))}
+            <div className="panel-body">
+              <div className="dash-check-list">
+                {checklist.map((row) => (
+                  <div
+                    className={`dash-check-item${row.done ? " done" : ""}${row.current ? " current" : ""}`}
+                    key={row.label}
+                  >
+                    <div className="dash-check-dot">{row.done ? "✓" : ""}</div>
+                    {row.label}
+                  </div>
+                ))}
+              </div>
+              <div className="dash-check-progress">
+                <span style={{ width: `${Math.round((checklistDone / checklist.length) * 100)}%` }} />
+              </div>
+              <div className="dash-check-label">{checklistDone} of {checklist.length} steps done</div>
             </div>
           </section>
 
-          <section className="panel">
+          <section className="panel dash-panel">
             <div className="panel-head">
               <div>
                 <h2>{unpaid ? "Free to read now" : "Recommended for You"}</h2>
@@ -291,29 +360,32 @@ export default function Dashboard({ setActiveView, hasAssessmentAccess = true, o
             </div>
             <div className="panel-body">
               {resources.length > 0 ? (
-                resources.map((resource, index) => (
-                  <button
-                    type="button"
-                    className="callout"
-                    key={resource.title}
-                    style={{ display: "block", width: "100%", textAlign: "left", marginTop: index ? 9 : 0 }}
-                    onClick={() => setActiveView("resources")}
-                  >
-                    <strong>{resource.title}</strong>
-                    <br />
-                    {resource.description || resource.type || "Recommended resource"}
-                  </button>
-                ))
+                resources.map((resource) => {
+                  const icon = resourceIcon(resource);
+                  return (
+                    <button
+                      type="button"
+                      className="dash-rec"
+                      key={resource.title}
+                      onClick={() => setActiveView("resources")}
+                    >
+                      <div className={`dash-rec-icon ${icon.kind}`}>{icon.mark}</div>
+                      <div className="dash-rec-body">
+                        <strong>{resource.title}</strong>
+                        <p>{resource.description || resource.type || "Recommended resource"}</p>
+                        <span>Open →</span>
+                      </div>
+                    </button>
+                  );
+                })
               ) : (
-                <button
-                  type="button"
-                  className="callout"
-                  style={{ display: "block", width: "100%", textAlign: "left" }}
-                  onClick={() => setActiveView("resources")}
-                >
-                  <strong>Browse the Help Center</strong>
-                  <br />
-                  Free guides, worksheets, and videos are available without purchasing.
+                <button type="button" className="dash-rec" onClick={() => setActiveView("resources")}>
+                  <div className="dash-rec-icon guide">📘</div>
+                  <div className="dash-rec-body">
+                    <strong>Browse the Help Center</strong>
+                    <p>Free guides, worksheets, and videos are available without purchasing.</p>
+                    <span>Open →</span>
+                  </div>
                 </button>
               )}
             </div>
