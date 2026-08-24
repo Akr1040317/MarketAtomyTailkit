@@ -123,10 +123,12 @@ export default function Dashboard({ setActiveView, hasAssessmentAccess = true, o
   if (!unpaid) {
     if (!complete) {
       nextSteps.push({
-        title: remaining === 1 ? "Finish the last assessment section" : `Finish remaining ${remaining} assessment sections`,
-        body: "Continue building your baseline so scores and recommendations become more complete.",
+        title: remaining === 1 ? "Finish the last assessment section" : completedSections.length === 0 ? "Start your Business Health Check" : `Finish remaining ${remaining} assessment sections`,
+        body: completedSections.length === 0
+          ? "Answer each section from the beginning. Your report and action plan appear after you complete the assessment."
+          : "Continue building your baseline so scores and recommendations become more complete.",
         view: "assessmentUser",
-        cta: "Continue",
+        cta: completedSections.length === 0 ? "Begin" : "Continue",
       });
     }
     actionItems.slice(0, 2).forEach((item) => {
@@ -204,7 +206,9 @@ export default function Dashboard({ setActiveView, hasAssessmentAccess = true, o
               ? "The assessment, report, and action plan stay locked until checkout. Free guides, worksheets, and videos in the Help Center are available now."
               : complete
                 ? "Review your scores, open the full report, and use recommended resources to decide what deserves attention next."
-                : "Continue building your baseline. Scores and recommendations become more complete as you finish additional sections."}
+                : completedSections.length === 0
+                  ? "Start from the first section. Your scores, report, and action plan will fill in as you complete the assessment."
+                  : "Continue building your baseline. Scores and recommendations become more complete as you finish additional sections."}
           </p>
           {!unpaid ? (
             <div className="dash-progress">
@@ -223,7 +227,7 @@ export default function Dashboard({ setActiveView, hasAssessmentAccess = true, o
               className="btn btn-primary"
               onClick={() => (unpaid ? onRequestPurchase?.() : setActiveView("assessmentUser"))}
             >
-              {unpaid ? "Assessment locked" : complete ? "Review Assessment" : "Continue Assessment"}
+              {unpaid ? "Assessment locked" : complete ? "Review Assessment" : completedSections.length === 0 ? "Begin Assessment" : "Continue Assessment"}
             </button>
             <button
               type="button"

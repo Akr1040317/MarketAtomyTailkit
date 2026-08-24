@@ -45,6 +45,10 @@ export default function ClientWorkspace({
   canSwitchAdmin,
   onSwitchAdmin,
   hasAssessmentAccess = true,
+  demoSessionBusy = false,
+  onStartAsNewClient,
+  onRestoreSeededDemo,
+  refreshKey = 0,
   children,
 }) {
   const [completion, setCompletion] = useState(null);
@@ -76,7 +80,7 @@ export default function ClientWorkspace({
       }
     };
     load();
-  }, [user, activeView]);
+  }, [user, activeView, refreshKey]);
 
   const navItems = CLIENT_NAV.map((item) => ({
     ...item,
@@ -139,6 +143,22 @@ export default function ClientWorkspace({
   const menuActions = [
     ...(canSwitchAdmin && onSwitchAdmin
       ? [{ label: "Admin View", onClick: onSwitchAdmin }]
+      : []),
+    ...(onStartAsNewClient
+      ? [
+          {
+            label: demoSessionBusy ? "Starting new client…" : "Take assessment as new client",
+            onClick: onStartAsNewClient,
+          },
+        ]
+      : []),
+    ...(onRestoreSeededDemo
+      ? [
+          {
+            label: demoSessionBusy ? "Restoring demo…" : "Restore seeded demo results",
+            onClick: onRestoreSeededDemo,
+          },
+        ]
       : []),
     { label: "Give Feedback", onClick: onFeedback },
     { label: "Report a Bug", onClick: () => setActiveView("bugReport") },

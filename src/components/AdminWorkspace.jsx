@@ -28,6 +28,7 @@ export default function AdminWorkspace({
   lastName,
   onLogout,
   onSwitchClient,
+  onStartAsNewClient,
   children,
 }) {
   const [counts, setCounts] = useState({ users: 0, bugs: 0, sections: 0 });
@@ -62,6 +63,9 @@ export default function AdminWorkspace({
 
   const menuActions = [
     { label: "Client Preview", onClick: onSwitchClient },
+    ...(onStartAsNewClient
+      ? [{ label: "Take assessment as new client", onClick: onStartAsNewClient }]
+      : []),
     { label: "Give Feedback", onClick: () => setActiveView("adminFeedback") },
     { label: "Report a Bug", onClick: () => setActiveView("adminBugReport") },
     { label: "Sign out", onClick: onLogout, danger: true },

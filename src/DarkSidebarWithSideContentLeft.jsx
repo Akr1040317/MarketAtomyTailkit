@@ -8,6 +8,7 @@ import FeedbackModal from "./components/FeedbackModal";
 import WelcomePurchaseModal from "./components/WelcomePurchaseModal";
 import { hasAssessmentEntitlement } from "./utils/pricing";
 import { confirmAssessmentPurchase } from "./utils/stripeCheckout";
+import { hasDemoSeededBackup, restoreDemoSeededClient, startDemoAsNewClient } from "./utils/demoClientSession";
 import { toast } from "./components/Toast";
 
 // Import your separate view components
@@ -47,6 +48,9 @@ export default function DarkSidebarWithSideContentLeft() {
   const [hasAssessmentAccess, setHasAssessmentAccess] = useState(null);
   const [showWelcomePurchase, setShowWelcomePurchase] = useState(false);
   const [welcomeStartAtPurchase, setWelcomeStartAtPurchase] = useState(false);
+  const [hasSeededBackup, setHasSeededBackup] = useState(false);
+  const [demoSessionBusy, setDemoSessionBusy] = useState(false);
+  const [clientDataEpoch, setClientDataEpoch] = useState(0);
   const confirmingPurchase = useRef(false);
 
   const navigate = useNavigate();
@@ -76,6 +80,7 @@ export default function DarkSidebarWithSideContentLeft() {
             setFirstName(userData.firstName || "");
             setLastName(userData.lastName || "");
             setUserRole(userData.role || "");
+            setHasSeededBackup(hasDemoSeededBackup(userData));
             // Default home screen:
             // - Admin view: Admin Dashboard
             // - Client view: Dashboard
@@ -126,6 +131,8 @@ export default function DarkSidebarWithSideContentLeft() {
         setViewModeOverride(null);
         setHasAssessmentAccess(null);
         setShowWelcomePurchase(false);
+        setHasSeededBackup(false);
+        setDemoSessionBusy(false);
       }
     });
     return () => unsubscribe();
@@ -202,6 +209,66 @@ export default function DarkSidebarWithSideContentLeft() {
     setShowWelcomePurchase(true);
   };
 
+  const switchToClientPreview = () => {
+    setViewModeOverride("client");
+    setActiveView("dashboard");
+  };
+
+  const refreshAfterDemoSession = (userData) => {
+    setHasSeededBackup(hasDemoSeededBackup(userData));
+    setClientDataEpoch((value) => value + 1);
+  };
+
+  const handleStartAsNewClient = async () => {
+    const uid = auth.currentUser?.uid;
+    if (!uid || demoSessionBusy) return;
+    const confirmed = window.confirm(
+      "Start the Business Health Check from the beginning? Current answers will be cleared. Seeded demo results are saved and can be restored later."
+    );
+    if (!confirmed) return;
+
+    setDemoSessionBusy(true);
+    try {
+      await startDemoAsNewClient(uid);
+      const snap = await getDoc(doc(db, "users", uid));
+      refreshAfterDemoSession(snap.exists() ? snap.data() : {});
+      setViewModeOverride("client");
+      setShowWelcomePurchase(false);
+      setActiveView("onboarding");
+      toast("Starting as a new client. Take the assessment from the beginning; your report will build as you finish sections.");
+    } catch (error) {
+      console.error("Error starting demo as new client:", error);
+      toast("Could not reset the assessment. Try again or contact support.");
+    } finally {
+      setDemoSessionBusy(false);
+    }
+  };
+
+  const handleRestoreSeededDemo = async () => {
+    const uid = auth.currentUser?.uid;
+    if (!uid || demoSessionBusy) return;
+    const confirmed = window.confirm(
+      "Restore the original seeded demo results? Answers from this new-client run will be replaced."
+    );
+    if (!confirmed) return;
+
+    setDemoSessionBusy(true);
+    try {
+      await restoreDemoSeededClient(uid);
+      const snap = await getDoc(doc(db, "users", uid));
+      refreshAfterDemoSession(snap.exists() ? snap.data() : {});
+      setViewModeOverride("client");
+      setShowWelcomePurchase(false);
+      setActiveView("dashboard");
+      toast("Seeded demo results restored. Reports and action plan are ready to review.");
+    } catch (error) {
+      console.error("Error restoring seeded demo:", error);
+      toast(error.message || "Could not restore the seeded demo results.");
+    } finally {
+      setDemoSessionBusy(false);
+    }
+  };
+
   // Logout function with redirection to login page
   const handleLogout = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
@@ -268,6 +335,10 @@ export default function DarkSidebarWithSideContentLeft() {
           onFeedback={() => setFeedbackModalOpen(true)}
           canSwitchAdmin={canSwitchAdmin}
           hasAssessmentAccess={hasAssessmentAccess}
+          demoSessionBusy={demoSessionBusy}
+          refreshKey={clientDataEpoch}
+          onStartAsNewClient={canSwitchAdmin ? handleStartAsNewClient : undefined}
+          onRestoreSeededDemo={canSwitchAdmin && hasSeededBackup ? handleRestoreSeededDemo : undefined}
           onSwitchAdmin={
             canSwitchAdmin
               ? () => {
@@ -278,11 +349,11 @@ export default function DarkSidebarWithSideContentLeft() {
           }
         >
           {reduceMotion ? (
-            clientView
+            <div key={`${clientDataEpoch}-${activeView}`}>{clientView}</div>
           ) : (
             <AnimatePresence mode="wait">
               <motion.div
-                key={activeView}
+                key={`${clientDataEpoch}-${activeView}`}
                 initial={{ opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -12 }}
@@ -342,10 +413,8 @@ export default function DarkSidebarWithSideContentLeft() {
         firstName={firstName}
         lastName={lastName}
         onLogout={handleLogout}
-        onSwitchClient={() => {
-          setViewModeOverride("client");
-          setActiveView("dashboard");
-        }}
+        onSwitchClient={switchToClientPreview}
+        onStartAsNewClient={handleStartAsNewClient}
       >
         {reduceMotion ? (
           adminView
