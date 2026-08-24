@@ -2,7 +2,7 @@ const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const Stripe = require("stripe");
 
 const { db } = require("../utils/firebaseAdmin");
-const { APP_BASE_URL, STRIPE_SECRET_KEY } = require("../config");
+const { APP_BASE_URL, stripeSecretKey } = require("../config");
 const { getStripeCatalog, isBetaPromoCode } = require("./catalog");
 const { grantAssessmentAccess, sessionUid } = require("./grantAccess");
 
@@ -36,14 +36,20 @@ function safeReturnUrl(candidate, fallback) {
 }
 
 function getStripe() {
-  return new Stripe(STRIPE_SECRET_KEY.value(), {
+  const key = stripeSecretKey();
+  if (!key) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Stripe is not configured. Add STRIPE_SECRET_KEY to functions/.env and redeploy."
+    );
+  }
+  return new Stripe(key, {
     apiVersion: "2026-07-29.dahlia",
   });
 }
 
 const createCheckoutSession = onCall(
   {
-    secrets: [STRIPE_SECRET_KEY],
     cors: true,
   },
   async (request) => {
@@ -76,7 +82,7 @@ const createCheckoutSession = onCall(
     }
 
     const stripe = getStripe();
-    const catalog = getStripeCatalog(STRIPE_SECRET_KEY.value());
+    const catalog = getStripeCatalog(stripeSecretKey());
     const returnOrigin = safeReturnUrl(request.data?.successUrl, `${fallbackAppUrl()}?purchase=success`);
     const parsedReturn = new URL(returnOrigin);
     const successUrl = `${parsedReturn.origin}/dashboard?purchase=success&session_id={CHECKOUT_SESSION_ID}`;
@@ -118,7 +124,6 @@ const createCheckoutSession = onCall(
 
 const confirmCheckoutSession = onCall(
   {
-    secrets: [STRIPE_SECRET_KEY],
     cors: true,
   },
   async (request) => {

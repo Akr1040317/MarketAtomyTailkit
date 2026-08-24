@@ -42,7 +42,20 @@ These Functions use params (2nd gen) with defaults:
 
 Set params in the Firebase console (Functions → Runtime params), or via CLI if desired.
 
-### 3) Deploy
+### 3) Stripe checkout (no Secret Manager)
+
+Put your Stripe keys in `functions/.env` (gitignored). Firebase loads that file on deploy:
+
+```
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+```
+
+Promo codes unlock the assessment without Stripe. Paid checkout needs `STRIPE_SECRET_KEY`. The webhook secret is optional because returning from Stripe confirms the purchase directly.
+
+Copy `functions/.env.example` if you are starting from scratch.
+
+### 4) Deploy
 
 ```bash
 firebase deploy --only functions --project businesshealthassessment

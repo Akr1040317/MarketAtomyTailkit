@@ -1,11 +1,13 @@
 const { onRequest } = require("firebase-functions/v2/https");
 const Stripe = require("stripe");
 
-const { STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET } = require("../config");
+const { stripeSecretKey, stripeWebhookSecret } = require("../config");
 const { grantAssessmentAccess, sessionUid } = require("./grantAccess");
 
 function getStripe() {
-  return new Stripe(STRIPE_SECRET_KEY.value(), {
+  const key = stripeSecretKey();
+  if (!key) throw new Error("STRIPE_SECRET_KEY is missing from functions/.env");
+  return new Stripe(key, {
     apiVersion: "2026-07-29.dahlia",
   });
 }
@@ -32,13 +34,18 @@ async function fulfillCheckoutSession(session) {
 
 const stripeWebhook = onRequest(
   {
-    secrets: [STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET],
     cors: false,
     invoker: "public",
   },
   async (req, res) => {
     if (req.method !== "POST") {
       res.status(405).send("Method Not Allowed");
+      return;
+    }
+
+    const webhookSecret = stripeWebhookSecret();
+    if (!stripeSecretKey() || !webhookSecret) {
+      res.status(200).json({ received: true, configured: false });
       return;
     }
 
@@ -54,7 +61,7 @@ const stripeWebhook = onRequest(
       event = stripe.webhooks.constructEvent(
         req.rawBody,
         signature,
-        STRIPE_WEBHOOK_SECRET.value()
+        webhookSecret
       );
     } catch (error) {
       console.error("Stripe webhook signature verification failed", error.message);
