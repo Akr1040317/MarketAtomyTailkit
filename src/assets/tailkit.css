@@ -35,6 +35,9 @@
 }
 
 /* Override Tailwind base reset to remove color: inherit from form elements */
-input, select, optgroup, textarea {
+input:not([type="checkbox"]):not([type="radio"]),
+select,
+optgroup,
+textarea {
   color: #000000 !important;
 }

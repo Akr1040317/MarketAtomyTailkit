@@ -191,7 +191,7 @@ export default function MfaSmsModal({
 
   const title =
     stage === "offer"
-      ? "Protect your account"
+      ? "Secure your account"
       : stage === "send"
         ? "Confirm it is you"
         : stage === "phone"
@@ -209,9 +209,9 @@ export default function MfaSmsModal({
           <h2 id="mfa-title">{title}</h2>
           {stage === "offer" ? (
             <p>
-              We suggest turning on two-step verification. After you sign in with your password or
-              Google, we text a code to your phone so only you can get into the account. You can
-              skip this and still use MarketAtomy.
+              Turn on two-step verification for an extra layer of protection. After entering your
+              password or signing in with Google, we'll send a verification code to your phone to
+              confirm it's you. This step is optional, but strongly recommended.
             </p>
           ) : stage === "send" ? (
             <p>
@@ -219,8 +219,8 @@ export default function MfaSmsModal({
             </p>
           ) : stage === "phone" ? (
             <p>
-              Enter the number you want to use, then complete the security check. We will text a
-              code to confirm it. Standard messaging rates may apply.
+              Enter the phone number you'd like to use, then complete the verification step below.
+              We'll text a confirmation code to that number. Message and data rates may apply.
             </p>
           ) : (
             <p>
@@ -233,16 +233,17 @@ export default function MfaSmsModal({
           {error ? <p className="mfa-sms-error">{error}</p> : null}
 
           {stage === "offer" ? (
-            <div className="mfa-sms-actions mfa-sms-actions-stack">
+            <div className="mfa-sms-actions">
               <button type="button" className="primary" onClick={startEnroll} disabled={busy}>
-                Turn on two-step verification
+                Enable Two-Step Verification
               </button>
               <button type="button" className="secondary" onClick={skip} disabled={busy}>
-                Not now
+                Skip for now
               </button>
             </div>
           ) : stage === "send" ? (
             <form onSubmit={sendChallenge}>
+              {recaptcha}
               <div className="mfa-sms-actions">
                 <button type="submit" className="primary" disabled={busy}>
                   {busy ? "Sending…" : "Send code"}
@@ -264,13 +265,33 @@ export default function MfaSmsModal({
                 onChange={(event) => setPhone(event.target.value)}
                 disabled={busy}
               />
+              {recaptcha}
               <div className="mfa-sms-actions">
                 <button type="submit" className="primary" disabled={busy}>
                   {busy ? "Sending…" : "Send code"}
                 </button>
-                <button type="button" className="secondary" onClick={dismiss} disabled={busy}>
-                  {skippable ? "Not now" : "Cancel"}
-                </button>
+                {mode === "offer" ? (
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => {
+                      setError("");
+                      clearRecaptcha();
+                      setStage("offer");
+                    }}
+                    disabled={busy}
+                  >
+                    Back
+                  </button>
+                ) : skippable ? (
+                  <button type="button" className="secondary" onClick={skip} disabled={busy}>
+                    Skip for now
+                  </button>
+                ) : (
+                  <button type="button" className="secondary" onClick={dismiss} disabled={busy}>
+                    Cancel
+                  </button>
+                )}
               </div>
             </form>
           ) : (
@@ -292,13 +313,21 @@ export default function MfaSmsModal({
                 <button type="button" className="secondary" onClick={resend} disabled={busy}>
                   Resend
                 </button>
-                <button type="button" className="secondary" onClick={dismiss} disabled={busy}>
-                  {skippable ? "Not now" : "Cancel"}
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => {
+                    setError("");
+                    setCode("");
+                    setStage(mode === "challenge" ? "send" : "phone");
+                  }}
+                  disabled={busy}
+                >
+                  Back
                 </button>
               </div>
             </form>
           )}
-          {stage !== "offer" ? recaptcha : null}
         </div>
       </div>
     </div>

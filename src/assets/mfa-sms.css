@@ -19,7 +19,7 @@
 }
 
 .mfa-sms-panel {
-  width: min(440px, 100%);
+  width: min(480px, 100%);
   border-radius: 20px;
   padding: 28px 26px 22px;
   color: #f8fafc;
@@ -106,6 +106,7 @@
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+  align-items: stretch;
 }
 
 .mfa-sms-actions-stack {
@@ -136,12 +137,14 @@
 .mfa-sms-actions .primary {
   background: #169ee7;
   color: #031018;
+  flex: 1 1 auto;
 }
 
 .mfa-sms-actions .secondary {
   background: transparent;
   color: #cbd5e1;
   border: 1px solid rgba(255, 255, 255, 0.14);
+  flex: 0 1 auto;
 }
 
 .mfa-sms-actions button:disabled {
