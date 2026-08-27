@@ -17,6 +17,7 @@ import {
   isMfaRequiredError,
   needsMfaEnrollment,
   requireVerifiedEmail,
+  toE164,
 } from "./utils/mfaAuth";
 
 export default function LandingPage() {
@@ -56,6 +57,7 @@ export default function LandingPage() {
   const [lastName, setLastName] = useState("");
   const [username, setUsername] = useState("");
   const [signupEmail, setSignupEmail] = useState("");
+  const [signupPhone, setSignupPhone] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showSignupPassword, setShowSignupPassword] = useState(false);
@@ -64,7 +66,7 @@ export default function LandingPage() {
   const [signupSuccess, setSignupSuccess] = useState(false);
   const [usernameAvailable, setUsernameAvailable] = useState(true);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
-  const [mfa, setMfa] = useState({ open: false, mode: "enroll", user: null, resolver: null, intent: "login" });
+  const [mfa, setMfa] = useState({ open: false, mode: "enroll", user: null, resolver: null, intent: "login", phone: "" });
   const googleProvider = new GoogleAuthProvider();
   
   const googleFromDisplayName = (user) => {
@@ -75,10 +77,47 @@ export default function LandingPage() {
     };
   };
 
+  const closedMfa = () => ({
+    open: false,
+    mode: "enroll",
+    user: null,
+    resolver: null,
+    intent: "login",
+    phone: "",
+  });
+
+  const requireSignupPhone = () => {
+    const phone = toE164(signupPhone);
+    if (!phone) {
+      setSignupError("Enter a phone number with country code, like +15551234567. We use it for two-step verification.");
+      return "";
+    }
+    return phone;
+  };
+
+  const saveUserPhone = async (uid, phone) => {
+    const e164 = toE164(phone);
+    if (!uid || !e164) return;
+    await setDoc(doc(db, "users", uid), { phone: e164 }, { merge: true });
+  };
+
+  const getStoredUserPhone = async (uid) => {
+    if (!uid) return "";
+    try {
+      const snap = await getDoc(doc(db, "users", uid));
+      return toE164(snap.data()?.phone);
+    } catch {
+      return "";
+    }
+  };
+
   const ensureUserDoc = async (user, extras = {}) => {
     const userDocRef = doc(db, "users", user.uid);
     const userDocSnap = await getDoc(userDocRef);
-    if (userDocSnap.exists()) return;
+    if (userDocSnap.exists()) {
+      if (extras.phone) await saveUserPhone(user.uid, extras.phone);
+      return;
+    }
     const names = googleFromDisplayName(user);
     await setDoc(userDocRef, {
       userId: user.uid,
@@ -86,6 +125,7 @@ export default function LandingPage() {
       firstName: extras.firstName ?? names.firstName,
       lastName: extras.lastName ?? names.lastName,
       username: extras.username ?? "",
+      phone: toE164(extras.phone) || "",
       verified: user.emailVerified,
       signupMethod: extras.signupMethod || "email/password",
       role: "tier1",
@@ -101,10 +141,11 @@ export default function LandingPage() {
     setTimeout(() => navigate("/dashboard"), 800);
   };
 
-  const continueAfterFirstFactor = async (user, intent = "login") => {
+  const continueAfterFirstFactor = async (user, intent = "login", phone = "") => {
     await requireVerifiedEmail(user);
     if (needsMfaEnrollment(user)) {
-      setMfa({ open: true, mode: "enroll", user, resolver: null, intent });
+      const enrollPhone = toE164(phone) || await getStoredUserPhone(user.uid);
+      setMfa({ open: true, mode: "enroll", user, resolver: null, intent, phone: enrollPhone });
       return;
     }
     goToDashboard(intent);
@@ -117,14 +158,20 @@ export default function LandingPage() {
       user: null,
       resolver: getMfaResolver(error),
       intent,
+      phone: "",
     });
   };
 
-  const finishMfa = async (user) => {
+  const finishMfa = async (user, enrolledPhone) => {
     const intent = mfa.intent;
-    setMfa({ open: false, mode: "enroll", user: null, resolver: null, intent: "login" });
+    const phone = toE164(enrolledPhone || mfa.phone);
+    setMfa(closedMfa());
     try {
-      await ensureUserDoc(user, { signupMethod: intent === "signup" ? "google" : "email/password" });
+      await ensureUserDoc(user, {
+        signupMethod: intent === "signup" ? "google" : "email/password",
+        phone,
+      });
+      await saveUserPhone(user.uid, phone);
       goToDashboard(intent);
     } catch (error) {
       if (intent === "signup") setSignupError(formatAuthError(error));
@@ -174,10 +221,13 @@ export default function LandingPage() {
     e.preventDefault();
     setSignupError("");
     
-    if (!firstName || !lastName || !username || !signupEmail || !signupPassword || !confirmPassword) {
+    if (!firstName || !lastName || !username || !signupEmail || !signupPhone || !signupPassword || !confirmPassword) {
       setSignupError("Please fill in all fields.");
       return;
     }
+
+    const phone = requireSignupPhone();
+    if (!phone) return;
     
     if (!usernameAvailable) {
       setSignupError("Username is already taken.");
@@ -204,6 +254,7 @@ export default function LandingPage() {
         lastName,
         username,
         email: signupEmail,
+        phone,
         verified: user.emailVerified,
         signupMethod: "email/password",
         role: "tier1",
@@ -219,7 +270,7 @@ export default function LandingPage() {
         createdAt: serverTimestamp(),
       });
       
-      await continueAfterFirstFactor(user, "signup");
+      await continueAfterFirstFactor(user, "signup", phone);
     } catch (error) {
       if (isMfaRequiredError(error)) {
         handleMfaRequired(error, "signup");
@@ -232,6 +283,12 @@ export default function LandingPage() {
   // Handle Google Signup
   const handleGoogleSignup = async () => {
     setSignupError("");
+    const phone = requireSignupPhone();
+    if (!phone) return;
+    if (!agreedToTerms) {
+      setSignupError("Please confirm you agree before creating an account.");
+      return;
+    }
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
@@ -244,6 +301,7 @@ export default function LandingPage() {
         lastName: names.lastName,
         username: finalUsername,
         email: user.email,
+        phone,
         verified: user.emailVerified,
         signupMethod: "google",
         role: "tier1",
@@ -261,7 +319,7 @@ export default function LandingPage() {
         });
       }
       
-      await continueAfterFirstFactor(user, "signup");
+      await continueAfterFirstFactor(user, "signup", phone);
     } catch (error) {
       if (isMfaRequiredError(error)) {
         handleMfaRequired(error, "signup");
@@ -315,6 +373,8 @@ export default function LandingPage() {
       usernameAvailable={usernameAvailable}
       email={signupEmail}
       setEmail={setSignupEmail}
+      phone={signupPhone}
+      setPhone={setSignupPhone}
       password={signupPassword}
       setPassword={setSignupPassword}
       confirmPassword={confirmPassword}
@@ -349,9 +409,10 @@ export default function LandingPage() {
       mode={mfa.mode}
       user={mfa.user}
       resolver={mfa.resolver}
+      initialPhone={mfa.phone}
       onComplete={finishMfa}
       onCancel={() => {
-        setMfa({ open: false, mode: "enroll", user: null, resolver: null, intent: "login" });
+        setMfa(closedMfa());
       }}
     />
   );

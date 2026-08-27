@@ -15,6 +15,7 @@ import {
   isMfaRequiredError,
   needsMfaEnrollment,
   requireVerifiedEmail,
+  toE164,
 } from "./utils/mfaAuth";
 
 import googleLogo from "./assets/google.png";
@@ -41,7 +42,14 @@ export default function SignInBoxed() {
   const continueAfterFirstFactor = async (user) => {
     await requireVerifiedEmail(user);
     if (needsMfaEnrollment(user)) {
-      setMfa({ open: true, mode: "enroll", user, resolver: null });
+      let enrollPhone = "";
+      try {
+        const snap = await getDoc(doc(db, "users", user.uid));
+        enrollPhone = toE164(snap.data()?.phone);
+      } catch {
+        enrollPhone = "";
+      }
+      setMfa({ open: true, mode: "enroll", user, resolver: null, phone: enrollPhone });
       return;
     }
     goDashboard();
@@ -144,7 +152,12 @@ export default function SignInBoxed() {
         mode={mfa.mode}
         user={mfa.user}
         resolver={mfa.resolver}
-        onComplete={() => {
+        initialPhone={mfa.phone}
+        onComplete={async (user, enrolledPhone) => {
+          const phone = toE164(enrolledPhone || mfa.phone);
+          if (user?.uid && phone) {
+            await setDoc(doc(db, "users", user.uid), { phone }, { merge: true });
+          }
           setMfa({ open: false, mode: "enroll", user: null, resolver: null });
           goDashboard();
         }}
