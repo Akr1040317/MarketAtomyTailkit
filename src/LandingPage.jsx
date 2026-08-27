@@ -10,6 +10,14 @@ import {
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import MarketingLanding from "./components/MarketingLanding";
 import { LoginView, SignupView } from "./components/AuthPages";
+import MfaSmsModal from "./components/MfaSmsModal";
+import {
+  formatAuthError,
+  getMfaResolver,
+  isMfaRequiredError,
+  needsMfaEnrollment,
+  requireVerifiedEmail,
+} from "./utils/mfaAuth";
 
 export default function LandingPage() {
   const navigate = useNavigate();
@@ -56,22 +64,71 @@ export default function LandingPage() {
   const [signupSuccess, setSignupSuccess] = useState(false);
   const [usernameAvailable, setUsernameAvailable] = useState(true);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
-  
+  const [mfa, setMfa] = useState({ open: false, mode: "enroll", user: null, resolver: null, intent: "login" });
   const googleProvider = new GoogleAuthProvider();
+  
+  const googleFromDisplayName = (user) => {
+    const parts = (user.displayName || "").split(" ").filter(Boolean);
+    return {
+      firstName: parts[0] || "",
+      lastName: parts.slice(1).join(" "),
+    };
+  };
 
-  // Check username availability
-  const checkUsernameAvailability = async () => {
-    if (!username) {
-      setUsernameAvailable(false);
+  const ensureUserDoc = async (user, extras = {}) => {
+    const userDocRef = doc(db, "users", user.uid);
+    const userDocSnap = await getDoc(userDocRef);
+    if (userDocSnap.exists()) return;
+    const names = googleFromDisplayName(user);
+    await setDoc(userDocRef, {
+      userId: user.uid,
+      email: user.email,
+      firstName: extras.firstName ?? names.firstName,
+      lastName: extras.lastName ?? names.lastName,
+      username: extras.username ?? "",
+      verified: user.emailVerified,
+      signupMethod: extras.signupMethod || "email/password",
+      role: "tier1",
+      createdAt: serverTimestamp(),
+      lastLoggedOn: null,
+      lastLoggedOff: null,
+    });
+  };
+
+  const goToDashboard = (intent = "login") => {
+    if (intent === "signup") setSignupSuccess(true);
+    else setLoginSuccess(true);
+    setTimeout(() => navigate("/dashboard"), 800);
+  };
+
+  const continueAfterFirstFactor = async (user, intent = "login") => {
+    await requireVerifiedEmail(user);
+    if (needsMfaEnrollment(user)) {
+      setMfa({ open: true, mode: "enroll", user, resolver: null, intent });
       return;
     }
+    goToDashboard(intent);
+  };
+
+  const handleMfaRequired = (error, intent = "login") => {
+    setMfa({
+      open: true,
+      mode: "challenge",
+      user: null,
+      resolver: getMfaResolver(error),
+      intent,
+    });
+  };
+
+  const finishMfa = async (user) => {
+    const intent = mfa.intent;
+    setMfa({ open: false, mode: "enroll", user: null, resolver: null, intent: "login" });
     try {
-      const docRef = doc(db, "usernames", username.toLowerCase());
-      const docSnap = await getDoc(docRef);
-      setUsernameAvailable(!docSnap.exists());
+      await ensureUserDoc(user, { signupMethod: intent === "signup" ? "google" : "email/password" });
+      goToDashboard(intent);
     } catch (error) {
-      console.error("Error checking username:", error);
-      setUsernameAvailable(false);
+      if (intent === "signup") setSignupError(formatAuthError(error));
+      else setLoginError(formatAuthError(error));
     }
   };
 
@@ -82,68 +139,33 @@ export default function LandingPage() {
       setLoginError("Please enter your email and password.");
       return;
     }
+    setLoginError("");
     try {
       const userCredential = await signInWithEmailAndPassword(auth, loginEmail, loginPassword);
-      const user = userCredential.user;
-      const userId = user.uid;
-      const userDocRef = doc(db, "users", userId);
-      const userDocSnap = await getDoc(userDocRef);
-      
-      if (!userDocSnap.exists()) {
-        await setDoc(userDocRef, {
-          userId,
-          email: user.email,
-          verified: user.emailVerified,
-          signupMethod: "email/password",
-          role: "tier1",
-          createdAt: serverTimestamp(),
-          lastLoggedOn: null,
-          lastLoggedOff: null,
-        });
-      }
-      
-      setLoginSuccess(true);
-      setTimeout(() => navigate("/dashboard"), 1500);
+      await ensureUserDoc(userCredential.user, { signupMethod: "email/password" });
+      await continueAfterFirstFactor(userCredential.user, "login");
     } catch (error) {
-      setLoginError(error.message);
+      if (isMfaRequiredError(error)) {
+        handleMfaRequired(error, "login");
+        return;
+      }
+      setLoginError(formatAuthError(error));
     }
   };
 
   // Handle Google Login
   const handleGoogleLogin = async () => {
+    setLoginError("");
     try {
       const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
-      const userDocRef = doc(db, "users", user.uid);
-      const userDocSnap = await getDoc(userDocRef);
-      
-      if (!userDocSnap.exists()) {
-        let parsedFirstName = "";
-        let parsedLastName = "";
-        if (user.displayName) {
-          const parts = user.displayName.split(" ");
-          parsedFirstName = parts[0];
-          parsedLastName = parts.slice(1).join(" ");
-        }
-        await setDoc(userDocRef, {
-          userId: user.uid,
-          firstName: parsedFirstName,
-          lastName: parsedLastName,
-          email: user.email,
-          username: "",
-          verified: user.emailVerified,
-          signupMethod: "google",
-          role: "tier1",
-          createdAt: serverTimestamp(),
-          lastLoggedOn: null,
-          lastLoggedOff: null,
-        });
-      }
-      
-      setLoginSuccess(true);
-      setTimeout(() => navigate("/dashboard"), 1500);
+      await ensureUserDoc(result.user, { signupMethod: "google" });
+      await continueAfterFirstFactor(result.user, "login");
     } catch (error) {
-      setLoginError(error.message);
+      if (isMfaRequiredError(error)) {
+        handleMfaRequired(error, "login");
+        return;
+      }
+      setLoginError(formatAuthError(error));
     }
   };
 
@@ -197,33 +219,29 @@ export default function LandingPage() {
         createdAt: serverTimestamp(),
       });
       
-      setSignupSuccess(true);
-      setTimeout(() => navigate("/dashboard"), 1500);
+      await continueAfterFirstFactor(user, "signup");
     } catch (error) {
-      setSignupError(error.message);
+      if (isMfaRequiredError(error)) {
+        handleMfaRequired(error, "signup");
+        return;
+      }
+      setSignupError(formatAuthError(error));
     }
   };
 
   // Handle Google Signup
   const handleGoogleSignup = async () => {
+    setSignupError("");
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
-      
-      let parsedFirstName = "";
-      let parsedLastName = "";
-      if (user.displayName) {
-        const parts = user.displayName.split(" ");
-        parsedFirstName = parts[0];
-        parsedLastName = parts.slice(1).join(" ");
-      }
-      
+      const names = googleFromDisplayName(user);
       const finalUsername = username || "";
       
       await setDoc(doc(db, "users", user.uid), {
         userId: user.uid,
-        firstName: parsedFirstName,
-        lastName: parsedLastName,
+        firstName: names.firstName,
+        lastName: names.lastName,
         username: finalUsername,
         email: user.email,
         verified: user.emailVerified,
@@ -232,7 +250,7 @@ export default function LandingPage() {
         createdAt: serverTimestamp(),
         lastLoggedOn: null,
         lastLoggedOff: null,
-      });
+      }, { merge: true });
       
       if (finalUsername) {
         await setDoc(doc(db, "usernames", finalUsername.toLowerCase()), {
@@ -243,10 +261,28 @@ export default function LandingPage() {
         });
       }
       
-      setSignupSuccess(true);
-      setTimeout(() => navigate("/dashboard"), 1500);
+      await continueAfterFirstFactor(user, "signup");
     } catch (error) {
-      setSignupError(error.message);
+      if (isMfaRequiredError(error)) {
+        handleMfaRequired(error, "signup");
+        return;
+      }
+      setSignupError(formatAuthError(error));
+    }
+  };
+
+  const checkUsernameAvailability = async () => {
+    if (!username) {
+      setUsernameAvailable(false);
+      return;
+    }
+    try {
+      const docRef = doc(db, "usernames", username.toLowerCase());
+      const docSnap = await getDoc(docRef);
+      setUsernameAvailable(!docSnap.exists());
+    } catch (error) {
+      console.error("Error checking username:", error);
+      setUsernameAvailable(false);
     }
   };
 
@@ -307,14 +343,44 @@ export default function LandingPage() {
 
   // Render based on active view
 
-  if (activeView === "login") return renderLoginForm();
-  if (activeView === "signup") return renderSignupForm();
-  return (
-    <MarketingLanding
-      onHome={goHome}
-      onLogin={goLogin}
-      onSignup={goSignup}
+  const mfaModal = (
+    <MfaSmsModal
+      open={mfa.open}
+      mode={mfa.mode}
+      user={mfa.user}
+      resolver={mfa.resolver}
+      onComplete={finishMfa}
+      onCancel={() => {
+        setMfa({ open: false, mode: "enroll", user: null, resolver: null, intent: "login" });
+      }}
     />
+  );
+
+  if (activeView === "login") {
+    return (
+      <>
+        {renderLoginForm()}
+        {mfaModal}
+      </>
+    );
+  }
+  if (activeView === "signup") {
+    return (
+      <>
+        {renderSignupForm()}
+        {mfaModal}
+      </>
+    );
+  }
+  return (
+    <>
+      <MarketingLanding
+        onHome={goHome}
+        onLogin={goLogin}
+        onSignup={goSignup}
+      />
+      {mfaModal}
+    </>
   );
 }
 

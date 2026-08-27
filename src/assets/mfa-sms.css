@@ -1,0 +1,104 @@
+.mfa-sms {
+  position: relative;
+  z-index: 200000;
+}
+
+.mfa-sms-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 14, 26, 0.72);
+  backdrop-filter: blur(8px);
+}
+
+.mfa-sms-frame {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.mfa-sms-panel {
+  width: min(440px, 100%);
+  border-radius: 20px;
+  padding: 28px 26px 22px;
+  color: #f8fafc;
+  background:
+    radial-gradient(circle at 88% 0%, rgba(22, 158, 231, 0.16), transparent 34%),
+    #111827;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
+}
+
+.mfa-sms-panel h2 {
+  font-family: Manrope, sans-serif;
+  font-size: 1.35rem;
+  font-weight: 800;
+  margin: 0 0 8px;
+}
+
+.mfa-sms-panel p {
+  margin: 0 0 16px;
+  color: #cbd5e1;
+  line-height: 1.5;
+  font-size: 0.95rem;
+}
+
+.mfa-sms-panel label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #e2e8f0;
+}
+
+.mfa-sms-panel input {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #0f172a;
+  color: #f8fafc;
+  padding: 12px 14px;
+  font-size: 1rem;
+  margin-bottom: 14px;
+}
+
+.mfa-sms-error {
+  color: #fca5a5;
+  font-size: 0.88rem;
+  margin: 0 0 12px;
+}
+
+.mfa-sms-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.mfa-sms-actions button {
+  border: 0;
+  border-radius: 12px;
+  padding: 11px 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mfa-sms-actions .primary {
+  background: #169ee7;
+  color: #031018;
+}
+
+.mfa-sms-actions .secondary {
+  background: transparent;
+  color: #cbd5e1;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.mfa-sms-actions button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.mfa-recaptcha {
+  min-height: 1px;
+}

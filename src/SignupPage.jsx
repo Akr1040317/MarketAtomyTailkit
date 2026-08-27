@@ -8,6 +8,14 @@ import {
 import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
+import MfaSmsModal from "./components/MfaSmsModal";
+import {
+  formatAuthError,
+  getMfaResolver,
+  isMfaRequiredError,
+  needsMfaEnrollment,
+  requireVerifiedEmail,
+} from "./utils/mfaAuth";
 
 import companyLogo from "./assets/MarketAtomy-HOR-300x92.png";
 import googleLogo from "./assets/google.png";
@@ -26,9 +34,24 @@ export default function SignUpBoxed() {
   const [showAlert, setShowAlert] = useState(false);
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
   const [usernameAvailable, setUsernameAvailable] = useState(true);
+  const [mfa, setMfa] = useState({ open: false, mode: "enroll", user: null, resolver: null });
 
   const navigate = useNavigate();
   const googleProvider = new GoogleAuthProvider();
+
+  const goDashboard = () => {
+    setShowSuccessAlert(true);
+    setTimeout(() => navigate("/dashboard"), 800);
+  };
+
+  const continueAfterFirstFactor = async (user) => {
+    await requireVerifiedEmail(user);
+    if (needsMfaEnrollment(user)) {
+      setMfa({ open: true, mode: "enroll", user, resolver: null });
+      return;
+    }
+    goDashboard();
+  };
 
   // Toggle password visibility for password field
   const togglePasswordVisibility = () => {
@@ -125,12 +148,13 @@ export default function SignUpBoxed() {
         createdAt: serverTimestamp(),
       });
 
-      setShowSuccessAlert(true);
-      setTimeout(() => {
-        navigate("/dashboard");
-      }, 2000);
+      await continueAfterFirstFactor(user);
     } catch (error) {
-      setErrorMessage(error.message);
+      if (isMfaRequiredError(error)) {
+        setMfa({ open: true, mode: "challenge", user: null, resolver: getMfaResolver(error) });
+        return;
+      }
+      setErrorMessage(formatAuthError(error));
       setShowAlert(true);
     }
   };
@@ -183,18 +207,30 @@ export default function SignUpBoxed() {
         });
       }
 
-      setShowSuccessAlert(true);
-      setTimeout(() => {
-        navigate("/dashboard");
-      }, 2000);
+      await continueAfterFirstFactor(user);
     } catch (error) {
-      setErrorMessage(error.message);
+      if (isMfaRequiredError(error)) {
+        setMfa({ open: true, mode: "challenge", user: null, resolver: getMfaResolver(error) });
+        return;
+      }
+      setErrorMessage(formatAuthError(error));
       setShowAlert(true);
     }
   };
 
   return (
     <>
+      <MfaSmsModal
+        open={mfa.open}
+        mode={mfa.mode}
+        user={mfa.user}
+        resolver={mfa.resolver}
+        onComplete={() => {
+          setMfa({ open: false, mode: "enroll", user: null, resolver: null });
+          goDashboard();
+        }}
+        onCancel={() => setMfa({ open: false, mode: "enroll", user: null, resolver: null })}
+      />
       {/* Page Container */}
       <div
         id="page-container"

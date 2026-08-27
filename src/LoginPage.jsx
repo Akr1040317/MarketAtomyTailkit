@@ -8,6 +8,14 @@ import {
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
+import MfaSmsModal from "./components/MfaSmsModal";
+import {
+  formatAuthError,
+  getMfaResolver,
+  isMfaRequiredError,
+  needsMfaEnrollment,
+  requireVerifiedEmail,
+} from "./utils/mfaAuth";
 
 import googleLogo from "./assets/google.png";
 import companyLogo from "./assets/MarketAtomy-HOR-300x92.png";
@@ -20,9 +28,24 @@ export default function SignInBoxed() {
   const [errorMessage, setErrorMessage] = useState("");
   const [showAlert, setShowAlert] = useState(false);
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
+  const [mfa, setMfa] = useState({ open: false, mode: "enroll", user: null, resolver: null });
 
   const navigate = useNavigate();
   const googleProvider = new GoogleAuthProvider();
+
+  const goDashboard = () => {
+    setShowSuccessAlert(true);
+    setTimeout(() => navigate("/dashboard"), 800);
+  };
+
+  const continueAfterFirstFactor = async (user) => {
+    await requireVerifiedEmail(user);
+    if (needsMfaEnrollment(user)) {
+      setMfa({ open: true, mode: "enroll", user, resolver: null });
+      return;
+    }
+    goDashboard();
+  };
 
   // --- Email/Password Sign In ---
   const handleSignIn = async () => {
@@ -54,12 +77,13 @@ export default function SignInBoxed() {
         });
       }
 
-      setShowSuccessAlert(true);
-      setTimeout(() => {
-        navigate("/dashboard"); 
-      }, 2000);
+      await continueAfterFirstFactor(user);
     } catch (error) {
-      setErrorMessage(error.message);
+      if (isMfaRequiredError(error)) {
+        setMfa({ open: true, mode: "challenge", user: null, resolver: getMfaResolver(error) });
+        return;
+      }
+      setErrorMessage(formatAuthError(error));
       setShowAlert(true);
     }
   };
@@ -97,12 +121,13 @@ export default function SignInBoxed() {
         });
       }
 
-      setShowSuccessAlert(true);
-      setTimeout(() => {
-        navigate("/dashboard");
-      }, 2000);
+      await continueAfterFirstFactor(user);
     } catch (error) {
-      setErrorMessage(error.message);
+      if (isMfaRequiredError(error)) {
+        setMfa({ open: true, mode: "challenge", user: null, resolver: getMfaResolver(error) });
+        return;
+      }
+      setErrorMessage(formatAuthError(error));
       setShowAlert(true);
     }
   };
@@ -114,6 +139,17 @@ export default function SignInBoxed() {
 
   return (
     <>
+      <MfaSmsModal
+        open={mfa.open}
+        mode={mfa.mode}
+        user={mfa.user}
+        resolver={mfa.resolver}
+        onComplete={() => {
+          setMfa({ open: false, mode: "enroll", user: null, resolver: null });
+          goDashboard();
+        }}
+        onCancel={() => setMfa({ open: false, mode: "enroll", user: null, resolver: null })}
+      />
       {/* Page Container */}
       <div id="page-container" className="mx-auto flex min-h-dvh w-full min-w-80 flex-col bg-gray-900 dark:bg-gray-900 dark:text-gray-100">
         {/* Page Content */}
