@@ -12,9 +12,10 @@ import MfaSmsModal from "./components/MfaSmsModal";
 import {
   formatAuthError,
   getMfaResolver,
+  hasEnrolledMfa,
+  isMfaExemptUser,
   isMfaRequiredError,
-  needsMfaEnrollment,
-  requireVerifiedEmail,
+  sendVerificationIfNeeded,
   toE164,
 } from "./utils/mfaAuth";
 
@@ -27,7 +28,6 @@ export default function SignUpBoxed() {
   const [lastName, setLastName] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -46,13 +46,13 @@ export default function SignUpBoxed() {
     setTimeout(() => navigate("/dashboard"), 800);
   };
 
-  const continueAfterFirstFactor = async (user, enrollPhone = "") => {
-    await requireVerifiedEmail(user);
-    if (needsMfaEnrollment(user)) {
-      setMfa({ open: true, mode: "enroll", user, resolver: null, phone: toE164(enrollPhone) });
+  const offerOptionalMfa = async (user) => {
+    if (isMfaExemptUser(user) || hasEnrolledMfa(user)) {
+      goDashboard();
       return;
     }
-    goDashboard();
+    await sendVerificationIfNeeded(user);
+    setMfa({ open: true, mode: "offer", user, resolver: null, phone: "" });
   };
 
   // Toggle password visibility for password field
@@ -98,18 +98,10 @@ export default function SignUpBoxed() {
       !lastName ||
       !username ||
       !email ||
-      !phone ||
       !password ||
       !confirmPassword
     ) {
       setErrorMessage("Please fill in all fields.");
-      setShowAlert(true);
-      return;
-    }
-
-    const e164 = toE164(phone);
-    if (!e164) {
-      setErrorMessage("Enter a phone number with country code, like +15551234567. We use it for two-step verification.");
       setShowAlert(true);
       return;
     }
@@ -142,7 +134,6 @@ export default function SignUpBoxed() {
         lastName,
         username,
         email,
-        phone: e164,
         verified: user.emailVerified,
         signupMethod: "email/password",
         role: "tier1",
@@ -159,7 +150,7 @@ export default function SignUpBoxed() {
         createdAt: serverTimestamp(),
       });
 
-      await continueAfterFirstFactor(user, e164);
+      await offerOptionalMfa(user);
     } catch (error) {
       if (isMfaRequiredError(error)) {
         setMfa({ open: true, mode: "challenge", user: null, resolver: getMfaResolver(error) });
@@ -175,13 +166,6 @@ export default function SignUpBoxed() {
     e.preventDefault();
     setShowAlert(false);
     setErrorMessage("");
-
-    const e164 = toE164(phone);
-    if (!e164) {
-      setErrorMessage("Enter a phone number with country code, like +15551234567. We use it for two-step verification.");
-      setShowAlert(true);
-      return;
-    }
 
     try {
       const result = await signInWithPopup(auth, googleProvider);
@@ -207,7 +191,6 @@ export default function SignUpBoxed() {
         lastName: parsedLastName,
         username: finalUsername,
         email: user.email,
-        phone: e164,
         verified: user.emailVerified,
         signupMethod: "google",
         role: "tier1",
@@ -226,7 +209,7 @@ export default function SignUpBoxed() {
         });
       }
 
-      await continueAfterFirstFactor(user, e164);
+      await offerOptionalMfa(user);
     } catch (error) {
       if (isMfaRequiredError(error)) {
         setMfa({ open: true, mode: "challenge", user: null, resolver: getMfaResolver(error) });
@@ -245,11 +228,16 @@ export default function SignUpBoxed() {
         user={mfa.user}
         resolver={mfa.resolver}
         initialPhone={mfa.phone}
+        skippable={mfa.mode !== "challenge"}
         onComplete={async (user, enrolledPhone) => {
           const saved = toE164(enrolledPhone || mfa.phone);
           if (user?.uid && saved) {
             await setDoc(doc(db, "users", user.uid), { phone: saved }, { merge: true });
           }
+          setMfa({ open: false, mode: "enroll", user: null, resolver: null });
+          goDashboard();
+        }}
+        onSkip={() => {
           setMfa({ open: false, mode: "enroll", user: null, resolver: null });
           goDashboard();
         }}
@@ -366,30 +354,6 @@ export default function SignUpBoxed() {
                         onChange={(e) => setEmail(e.target.value)}
                         className="block w-full rounded-lg border border-gray-200 px-5 py-3 leading-6 dark:border-gray-600 dark:bg-gray-800"
                       />
-                    </div>
-
-                    {/* Phone */}
-                    <div className="space-y-1">
-                      <label
-                        htmlFor="phone"
-                        className="inline-block text-sm font-medium text-white"
-                      >
-                        Phone number
-                      </label>
-                      <input
-                        type="tel"
-                        id="phone"
-                        name="tel"
-                        autoComplete="tel"
-                        placeholder="+15551234567"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        className="block w-full rounded-lg border border-gray-200 px-5 py-3 leading-6 dark:border-gray-600 dark:bg-gray-800"
-                        required
-                      />
-                      <p className="text-sm text-gray-400">
-                        Required for two-step verification. We text a code to this number when you create your account and each time you sign in.
-                      </p>
                     </div>
 
                     {/* Password */}

@@ -9,7 +9,6 @@ import WelcomePurchaseModal from "./components/WelcomePurchaseModal";
 import { hasAssessmentEntitlement } from "./utils/pricing";
 import { confirmAssessmentPurchase } from "./utils/stripeCheckout";
 import { hasDemoSeededBackup, restoreDemoSeededClient, startDemoAsNewClient } from "./utils/demoClientSession";
-import { needsMfaEnrollment } from "./utils/mfaAuth";
 import { toast } from "./components/Toast";
 
 // Import your separate view components
@@ -67,12 +66,6 @@ export default function DarkSidebarWithSideContentLeft() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        if (needsMfaEnrollment(user)) {
-          toast("Add a phone number to finish signing in.");
-          await signOut(auth);
-          navigate("/login");
-          return;
-        }
         setUserEmail(user.email || "");
         // Default Danna into Admin view for presentations.
         if ((user.email || "").toLowerCase() === "dannaolivo@gmail.com") {

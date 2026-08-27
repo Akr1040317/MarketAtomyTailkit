@@ -10,6 +10,10 @@ import AboutPage from "./components/AboutPage";
 
 import "./assets/tailkit.css";
 
+if (import.meta.env.DEV && window.location.hostname === "localhost") {
+  window.location.replace(window.location.href.replace("://localhost", "://127.0.0.1"));
+}
+
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>

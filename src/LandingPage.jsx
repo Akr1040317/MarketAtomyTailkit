@@ -1,11 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { auth, db } from "./firebaseConfig";
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
-  GoogleAuthProvider
+  GoogleAuthProvider,
+  onAuthStateChanged,
 } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import MarketingLanding from "./components/MarketingLanding";
@@ -14,9 +15,10 @@ import MfaSmsModal from "./components/MfaSmsModal";
 import {
   formatAuthError,
   getMfaResolver,
+  hasEnrolledMfa,
+  isMfaExemptUser,
   isMfaRequiredError,
-  needsMfaEnrollment,
-  requireVerifiedEmail,
+  sendVerificationIfNeeded,
   toE164,
 } from "./utils/mfaAuth";
 
@@ -57,7 +59,6 @@ export default function LandingPage() {
   const [lastName, setLastName] = useState("");
   const [username, setUsername] = useState("");
   const [signupEmail, setSignupEmail] = useState("");
-  const [signupPhone, setSignupPhone] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showSignupPassword, setShowSignupPassword] = useState(false);
@@ -67,6 +68,8 @@ export default function LandingPage() {
   const [usernameAvailable, setUsernameAvailable] = useState(true);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [mfa, setMfa] = useState({ open: false, mode: "enroll", user: null, resolver: null, intent: "login", phone: "" });
+  const [googleBusy, setGoogleBusy] = useState(false);
+  const processedUid = useRef("");
   const googleProvider = new GoogleAuthProvider();
   
   const googleFromDisplayName = (user) => {
@@ -86,29 +89,10 @@ export default function LandingPage() {
     phone: "",
   });
 
-  const requireSignupPhone = () => {
-    const phone = toE164(signupPhone);
-    if (!phone) {
-      setSignupError("Enter a phone number with country code, like +15551234567. We use it for two-step verification.");
-      return "";
-    }
-    return phone;
-  };
-
   const saveUserPhone = async (uid, phone) => {
     const e164 = toE164(phone);
     if (!uid || !e164) return;
     await setDoc(doc(db, "users", uid), { phone: e164 }, { merge: true });
-  };
-
-  const getStoredUserPhone = async (uid) => {
-    if (!uid) return "";
-    try {
-      const snap = await getDoc(doc(db, "users", uid));
-      return toE164(snap.data()?.phone);
-    } catch {
-      return "";
-    }
   };
 
   const ensureUserDoc = async (user, extras = {}) => {
@@ -138,16 +122,62 @@ export default function LandingPage() {
   const goToDashboard = (intent = "login") => {
     if (intent === "signup") setSignupSuccess(true);
     else setLoginSuccess(true);
-    setTimeout(() => navigate("/dashboard"), 800);
+    setGoogleBusy(false);
+    setTimeout(() => navigate("/dashboard"), 400);
   };
 
-  const continueAfterFirstFactor = async (user, intent = "login", phone = "") => {
-    await requireVerifiedEmail(user);
-    if (needsMfaEnrollment(user)) {
-      const enrollPhone = toE164(phone) || await getStoredUserPhone(user.uid);
-      setMfa({ open: true, mode: "enroll", user, resolver: null, intent, phone: enrollPhone });
+  const finishExistingSession = async (user, intent = "login") => {
+    if (!user) return;
+    if (processedUid.current === user.uid) {
+      setGoogleBusy(false);
       return;
     }
+    processedUid.current = user.uid;
+    await ensureUserDoc(user, { signupMethod: "google" });
+    if (intent === "signup") await offerOptionalMfa(user, "signup");
+    else goToDashboard("login");
+  };
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        if (!mfa.open) processedUid.current = "";
+        return;
+      }
+      if (mfa.open || loginSuccess || signupSuccess) return;
+      if (location.pathname !== "/login" && location.pathname !== "/signup") return;
+      try {
+        await finishExistingSession(
+          user,
+          location.pathname === "/signup" ? "signup" : "login"
+        );
+      } catch (error) {
+        processedUid.current = "";
+        const message = formatAuthError(error);
+        if (location.pathname === "/signup") setSignupError(message);
+        else setLoginError(message);
+        setGoogleBusy(false);
+      }
+    });
+    return unsub;
+  }, [location.pathname, mfa.open, loginSuccess, signupSuccess]);
+
+  const offerOptionalMfa = async (user, intent = "signup") => {
+    if (isMfaExemptUser(user) || hasEnrolledMfa(user)) {
+      goToDashboard(intent);
+      return;
+    }
+    await sendVerificationIfNeeded(user);
+    setMfa({ open: true, mode: "offer", user, resolver: null, intent, phone: "" });
+  };
+
+  const skipMfa = () => {
+    const intent = mfa.intent || "signup";
+    setMfa(closedMfa());
+    goToDashboard(intent);
+  };
+
+  const continueAfterLogin = async (user, intent = "login") => {
     goToDashboard(intent);
   };
 
@@ -165,6 +195,7 @@ export default function LandingPage() {
   const finishMfa = async (user, enrolledPhone) => {
     const intent = mfa.intent;
     const phone = toE164(enrolledPhone || mfa.phone);
+    if (user?.uid) processedUid.current = user.uid;
     setMfa(closedMfa());
     try {
       await ensureUserDoc(user, {
@@ -189,8 +220,9 @@ export default function LandingPage() {
     setLoginError("");
     try {
       const userCredential = await signInWithEmailAndPassword(auth, loginEmail, loginPassword);
+      processedUid.current = userCredential.user.uid;
       await ensureUserDoc(userCredential.user, { signupMethod: "email/password" });
-      await continueAfterFirstFactor(userCredential.user, "login");
+      await continueAfterLogin(userCredential.user, "login");
     } catch (error) {
       if (isMfaRequiredError(error)) {
         handleMfaRequired(error, "login");
@@ -203,11 +235,12 @@ export default function LandingPage() {
   // Handle Google Login
   const handleGoogleLogin = async () => {
     setLoginError("");
+    setGoogleBusy(true);
     try {
       const result = await signInWithPopup(auth, googleProvider);
-      await ensureUserDoc(result.user, { signupMethod: "google" });
-      await continueAfterFirstFactor(result.user, "login");
+      await finishExistingSession(result.user, "login");
     } catch (error) {
+      setGoogleBusy(false);
       if (isMfaRequiredError(error)) {
         handleMfaRequired(error, "login");
         return;
@@ -221,13 +254,10 @@ export default function LandingPage() {
     e.preventDefault();
     setSignupError("");
     
-    if (!firstName || !lastName || !username || !signupEmail || !signupPhone || !signupPassword || !confirmPassword) {
+    if (!firstName || !lastName || !username || !signupEmail || !signupPassword || !confirmPassword) {
       setSignupError("Please fill in all fields.");
       return;
     }
-
-    const phone = requireSignupPhone();
-    if (!phone) return;
     
     if (!usernameAvailable) {
       setSignupError("Username is already taken.");
@@ -247,6 +277,7 @@ export default function LandingPage() {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, signupEmail, signupPassword);
       const user = userCredential.user;
+      processedUid.current = user.uid;
       
       await setDoc(doc(db, "users", user.uid), {
         userId: user.uid,
@@ -254,7 +285,6 @@ export default function LandingPage() {
         lastName,
         username,
         email: signupEmail,
-        phone,
         verified: user.emailVerified,
         signupMethod: "email/password",
         role: "tier1",
@@ -270,7 +300,7 @@ export default function LandingPage() {
         createdAt: serverTimestamp(),
       });
       
-      await continueAfterFirstFactor(user, "signup", phone);
+      await offerOptionalMfa(user, "signup");
     } catch (error) {
       if (isMfaRequiredError(error)) {
         handleMfaRequired(error, "signup");
@@ -283,15 +313,19 @@ export default function LandingPage() {
   // Handle Google Signup
   const handleGoogleSignup = async () => {
     setSignupError("");
-    const phone = requireSignupPhone();
-    if (!phone) return;
     if (!agreedToTerms) {
-      setSignupError("Please confirm you agree before creating an account.");
+      setSignupError("Check the box above, then try Google sign-up again.");
       return;
     }
+    setGoogleBusy(true);
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
+      if (processedUid.current === user.uid) {
+        setGoogleBusy(false);
+        return;
+      }
+      processedUid.current = user.uid;
       const names = googleFromDisplayName(user);
       const finalUsername = username || "";
       
@@ -301,7 +335,6 @@ export default function LandingPage() {
         lastName: names.lastName,
         username: finalUsername,
         email: user.email,
-        phone,
         verified: user.emailVerified,
         signupMethod: "google",
         role: "tier1",
@@ -319,8 +352,10 @@ export default function LandingPage() {
         });
       }
       
-      await continueAfterFirstFactor(user, "signup", phone);
+      await offerOptionalMfa(user, "signup");
+      setGoogleBusy(false);
     } catch (error) {
+      setGoogleBusy(false);
       if (isMfaRequiredError(error)) {
         handleMfaRequired(error, "signup");
         return;
@@ -354,6 +389,7 @@ export default function LandingPage() {
       setShowPassword={setShowLoginPassword}
       error={loginError}
       success={loginSuccess}
+      googleBusy={googleBusy}
       onSubmit={handleLogin}
       onGoogle={handleGoogleLogin}
       onHome={goHome}
@@ -373,8 +409,6 @@ export default function LandingPage() {
       usernameAvailable={usernameAvailable}
       email={signupEmail}
       setEmail={setSignupEmail}
-      phone={signupPhone}
-      setPhone={setSignupPhone}
       password={signupPassword}
       setPassword={setSignupPassword}
       confirmPassword={confirmPassword}
@@ -387,6 +421,7 @@ export default function LandingPage() {
       setAgreedToTerms={setAgreedToTerms}
       error={signupError}
       success={signupSuccess}
+      googleBusy={googleBusy}
       onSubmit={handleSignup}
       onGoogle={handleGoogleSignup}
       onHome={goHome}
@@ -410,7 +445,9 @@ export default function LandingPage() {
       user={mfa.user}
       resolver={mfa.resolver}
       initialPhone={mfa.phone}
+      skippable={mfa.mode !== "challenge"}
       onComplete={finishMfa}
+      onSkip={skipMfa}
       onCancel={() => {
         setMfa(closedMfa());
       }}

@@ -7,9 +7,12 @@ import {
   completeChallenge,
   completeEnrollment,
   formatAuthError,
+  formatPhoneHint,
   getPhoneHints,
+  getRecaptchaVerifier,
   sendChallengeCode,
   sendEnrollmentCode,
+  sendVerificationIfNeeded,
   toE164,
 } from "../utils/mfaAuth";
 import "../assets/mfa-sms.css";
@@ -20,91 +23,60 @@ export default function MfaSmsModal({
   user,
   resolver,
   initialPhone = "",
+  skippable: skippableProp,
   onComplete,
+  onSkip,
   onCancel,
 }) {
+  const skippable = skippableProp ?? (mode === "offer" || mode === "enroll");
+  const [stage, setStage] = useState(mode === "challenge" ? "send" : mode === "offer" ? "offer" : "phone");
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [verificationId, setVerificationId] = useState("");
-  const [step, setStep] = useState("phone");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const hints = getPhoneHints(resolver);
-  const hintLabel = hints[0]?.displayName || hints[0]?.phoneNumber || "your phone";
-  const prefill = toE164(initialPhone);
+  const hintLabel = formatPhoneHint(hints[0]);
 
   useEffect(() => {
-    if (!open) return;
-    const nextPhone = mode === "enroll" ? toE164(initialPhone) : "";
-    setPhone(nextPhone);
+    if (!open) {
+      clearRecaptcha();
+      return;
+    }
+    setPhone(mode === "enroll" ? toE164(initialPhone) : "");
     setCode("");
     setVerificationId("");
     setError("");
     setBusy(false);
-    setStep(mode === "challenge" ? "code" : "phone");
-    clearRecaptcha();
+    setStage(mode === "challenge" ? "send" : mode === "offer" ? "offer" : "phone");
   }, [open, mode, initialPhone]);
 
   useEffect(() => {
-    if (!open || mode !== "challenge" || !resolver) return;
+    if (!open || (stage !== "send" && stage !== "phone")) return;
     let cancelled = false;
-    const send = async () => {
-      setBusy(true);
-      setError("");
+    const timer = window.setTimeout(async () => {
       try {
-        const id = await sendChallengeCode(resolver, 0);
+        await getRecaptchaVerifier();
+      } catch {
         if (!cancelled) {
-          setVerificationId(id);
-          setStep("code");
+          /* Send/Resend will try again */
         }
-      } catch (err) {
-        if (!cancelled) setError(formatAuthError(err));
-      } finally {
-        if (!cancelled) setBusy(false);
       }
-    };
-    const timer = window.setTimeout(send, 50);
+    }, 80);
     return () => {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [open, mode, resolver]);
-
-  useEffect(() => {
-    if (!open || mode !== "enroll" || !user) return;
-    const e164 = toE164(initialPhone);
-    if (!e164) return;
-    let cancelled = false;
-    const send = async () => {
-      setBusy(true);
-      setError("");
-      try {
-        const id = await sendEnrollmentCode(user, e164);
-        if (!cancelled) {
-          setPhone(e164);
-          setVerificationId(id);
-          setStep("code");
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setPhone(e164);
-          setStep("phone");
-          setError(formatAuthError(err));
-        }
-      } finally {
-        if (!cancelled) setBusy(false);
-      }
-    };
-    const timer = window.setTimeout(send, 50);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-    };
-  }, [open, mode, user, initialPhone]);
+  }, [open, stage]);
 
   if (!open) return null;
 
-  const cancel = async () => {
+  const skip = () => {
+    clearRecaptcha();
+    onSkip?.();
+  };
+
+  const abandonLogin = async () => {
     clearRecaptcha();
     try {
       await signOut(auth);
@@ -112,6 +84,28 @@ export default function MfaSmsModal({
       /* ignore */
     }
     onCancel?.();
+  };
+
+  const dismiss = () => {
+    if (skippable) skip();
+    else void abandonLogin();
+  };
+
+  const startEnroll = async () => {
+    setError("");
+    try {
+      await user?.reload?.();
+    } catch {
+      /* ignore */
+    }
+    if (user && !user.emailVerified) {
+      await sendVerificationIfNeeded(user);
+      setError(
+        "Verify your email first to turn on two-step verification. We sent a link to your inbox. You can skip for now and add this later."
+      );
+      return;
+    }
+    setStage("phone");
   };
 
   const sendEnroll = async (event) => {
@@ -126,7 +120,22 @@ export default function MfaSmsModal({
     try {
       const id = await sendEnrollmentCode(user, e164);
       setVerificationId(id);
-      setStep("code");
+      setStage("code");
+    } catch (err) {
+      setError(formatAuthError(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const sendChallenge = async (event) => {
+    event?.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      const id = await sendChallengeCode(resolver, 0);
+      setVerificationId(id);
+      setStage("code");
     } catch (err) {
       setError(formatAuthError(err));
     } finally {
@@ -143,12 +152,12 @@ export default function MfaSmsModal({
     setBusy(true);
     setError("");
     try {
-      if (mode === "enroll") {
-        await completeEnrollment(user, verificationId, code.trim());
-        onComplete?.(user, toE164(phone));
-      } else {
+      if (mode === "challenge") {
         const result = await completeChallenge(resolver, verificationId, code.trim());
         onComplete?.(result.user);
+      } else {
+        await completeEnrollment(user, verificationId, code.trim(), toE164(phone));
+        onComplete?.(user, toE164(phone));
       }
     } catch (err) {
       setError(formatAuthError(err));
@@ -161,16 +170,16 @@ export default function MfaSmsModal({
     setBusy(true);
     setError("");
     try {
-      if (mode === "enroll") {
+      if (mode === "challenge") {
+        const id = await sendChallengeCode(resolver, 0);
+        setVerificationId(id);
+      } else {
         const e164 = toE164(phone);
         if (!e164) {
           setError("Enter a phone number with country code, like +15551234567.");
           return;
         }
         const id = await sendEnrollmentCode(user, e164);
-        setVerificationId(id);
-      } else {
-        const id = await sendChallengeCode(resolver, 0);
         setVerificationId(id);
       }
     } catch (err) {
@@ -180,19 +189,38 @@ export default function MfaSmsModal({
     }
   };
 
+  const title =
+    stage === "offer"
+      ? "Protect your account"
+      : stage === "send"
+        ? "Confirm it is you"
+        : stage === "phone"
+          ? "Add your phone number"
+          : "Enter your verification code";
+
+  const recaptcha = <div id={RECAPTCHA_ID} className="mfa-recaptcha" />;
+
   return (
     <div className="mfa-sms">
       <div className="mfa-sms-backdrop" />
       <div className="mfa-sms-frame">
         <div className="mfa-sms-panel" role="dialog" aria-modal="true" aria-labelledby="mfa-title">
-          <h2 id="mfa-title">
-            {mode === "enroll" ? "Add SMS security" : "Enter your SMS code"}
-          </h2>
-          {mode === "enroll" && step === "phone" ? (
+          {stage === "offer" ? <div className="mfa-sms-badge">Recommended</div> : null}
+          <h2 id="mfa-title">{title}</h2>
+          {stage === "offer" ? (
             <p>
-              {prefill
-                ? `We will text a verification code to ${prefill}. Standard messaging rates may apply.`
-                : "Every account needs a phone number for two-step verification. You will receive a text message; standard messaging rates may apply."}
+              We suggest turning on two-step verification. After you sign in with your password or
+              Google, we text a code to your phone so only you can get into the account. You can
+              skip this and still use MarketAtomy.
+            </p>
+          ) : stage === "send" ? (
+            <p>
+              Complete the security check, then we will text a code to {hintLabel}.
+            </p>
+          ) : stage === "phone" ? (
+            <p>
+              Enter the number you want to use, then complete the security check. We will text a
+              code to confirm it. Standard messaging rates may apply.
             </p>
           ) : (
             <p>
@@ -204,16 +232,27 @@ export default function MfaSmsModal({
 
           {error ? <p className="mfa-sms-error">{error}</p> : null}
 
-          {mode === "enroll" && step === "phone" && busy && prefill ? (
-            <>
-              <p>Sending a code to {prefill}…</p>
+          {stage === "offer" ? (
+            <div className="mfa-sms-actions mfa-sms-actions-stack">
+              <button type="button" className="primary" onClick={startEnroll} disabled={busy}>
+                Turn on two-step verification
+              </button>
+              <button type="button" className="secondary" onClick={skip} disabled={busy}>
+                Not now
+              </button>
+            </div>
+          ) : stage === "send" ? (
+            <form onSubmit={sendChallenge}>
               <div className="mfa-sms-actions">
-                <button type="button" className="secondary" onClick={cancel} disabled={busy}>
+                <button type="submit" className="primary" disabled={busy}>
+                  {busy ? "Sending…" : "Send code"}
+                </button>
+                <button type="button" className="secondary" onClick={dismiss} disabled={busy}>
                   Cancel
                 </button>
               </div>
-            </>
-          ) : mode === "enroll" && step === "phone" ? (
+            </form>
+          ) : stage === "phone" ? (
             <form onSubmit={sendEnroll}>
               <label htmlFor="mfa-phone">Phone number</label>
               <input
@@ -229,8 +268,8 @@ export default function MfaSmsModal({
                 <button type="submit" className="primary" disabled={busy}>
                   {busy ? "Sending…" : "Send code"}
                 </button>
-                <button type="button" className="secondary" onClick={cancel} disabled={busy}>
-                  Cancel
+                <button type="button" className="secondary" onClick={dismiss} disabled={busy}>
+                  {skippable ? "Not now" : "Cancel"}
                 </button>
               </div>
             </form>
@@ -253,13 +292,13 @@ export default function MfaSmsModal({
                 <button type="button" className="secondary" onClick={resend} disabled={busy}>
                   Resend
                 </button>
-                <button type="button" className="secondary" onClick={cancel} disabled={busy}>
-                  Cancel
+                <button type="button" className="secondary" onClick={dismiss} disabled={busy}>
+                  {skippable ? "Not now" : "Cancel"}
                 </button>
               </div>
             </form>
           )}
-          <div id={RECAPTCHA_ID} className="mfa-recaptcha" />
+          {stage !== "offer" ? recaptcha : null}
         </div>
       </div>
     </div>

@@ -124,6 +124,7 @@ export function LoginView({
   setShowPassword,
   error,
   success,
+  googleBusy = false,
   onSubmit,
   onGoogle,
   onHome,
@@ -210,10 +211,11 @@ export function LoginView({
 
         <div className="divider">or</div>
 
-        <button className="google-btn" type="button" onClick={onGoogle}>
+        <button className="google-btn" type="button" onClick={onGoogle} disabled={googleBusy}>
           <GoogleIcon />
-          Sign in with Google
+          {googleBusy ? "Signing in…" : "Sign in with Google"}
         </button>
+        {error && <div className="auth-alert error">{error}</div>}
 
         <div className="signup">
           Don&apos;t have an account?{" "}
@@ -240,8 +242,6 @@ export function SignupView({
   usernameAvailable,
   email,
   setEmail,
-  phone,
-  setPhone,
   password,
   setPassword,
   confirmPassword,
@@ -254,6 +254,7 @@ export function SignupView({
   setAgreedToTerms,
   error,
   success,
+  googleBusy = false,
   onSubmit,
   onGoogle,
   onHome,
@@ -269,14 +270,14 @@ export function SignupView({
           <span className="gradient-text">buy the assessment.</span>
         </h1>
         <p>
-          Sign up first. We need a phone number for two-step verification, then you can purchase the one-time $297 Business Health Check and begin.
+          Sign up first. After your account is created, you can purchase the one-time $297 Business Health Check and begin.
         </p>
         <div className="steps">
           <div className="step">
             <div className="step-num">01</div>
             <div>
               <strong>Create your account</strong>
-              <span>Email plus a phone number for two-step verification, so only you can get into the account.</span>
+              <span>This keeps your purchase, progress, and report tied to you.</span>
             </div>
           </div>
           <div className="step">
@@ -361,23 +362,6 @@ export function SignupView({
             />
           </div>
 
-          <div className="field">
-            <label htmlFor="signupPhone">Phone number</label>
-            <input
-              id="signupPhone"
-              name="tel"
-              type="tel"
-              autoComplete="tel"
-              placeholder="+15551234567"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              required
-            />
-            <p className="field-hint">
-              Required for two-step verification. We text a code to this number when you create your account and each time you sign in.
-            </p>
-          </div>
-
           <div className="password-grid">
             <div className="field">
               <label htmlFor="signupPassword">Password</label>
@@ -452,11 +436,11 @@ export function SignupView({
 
         <div className="divider">or</div>
 
-        <button className="google-btn" type="button" onClick={onGoogle}>
+        <button className="google-btn" type="button" onClick={onGoogle} disabled={googleBusy}>
           <GoogleIcon />
-          Sign up with Google
+          {googleBusy ? "Signing in…" : "Sign up with Google"}
         </button>
-        <p className="field-hint">Google sign-up still uses the phone number above for two-step verification.</p>
+        {error && <div className="auth-alert error">{error}</div>}
 
         <div className="signin">
           Already have an account?{" "}

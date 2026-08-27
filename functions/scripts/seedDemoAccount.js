@@ -138,6 +138,7 @@ async function ensureAuthUser() {
       password: DEMO_PASSWORD,
       displayName: `${DEMO_FIRST} ${DEMO_LAST}`,
       emailVerified: true,
+      multiFactor: { enrolledFactors: [] },
     });
     console.log(`Updated Auth user: ${DEMO_EMAIL} (${user.uid})`);
   } catch (error) {

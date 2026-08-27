@@ -13,8 +13,6 @@ import {
   formatAuthError,
   getMfaResolver,
   isMfaRequiredError,
-  needsMfaEnrollment,
-  requireVerifiedEmail,
   toE164,
 } from "./utils/mfaAuth";
 
@@ -39,19 +37,7 @@ export default function SignInBoxed() {
     setTimeout(() => navigate("/dashboard"), 800);
   };
 
-  const continueAfterFirstFactor = async (user) => {
-    await requireVerifiedEmail(user);
-    if (needsMfaEnrollment(user)) {
-      let enrollPhone = "";
-      try {
-        const snap = await getDoc(doc(db, "users", user.uid));
-        enrollPhone = toE164(snap.data()?.phone);
-      } catch {
-        enrollPhone = "";
-      }
-      setMfa({ open: true, mode: "enroll", user, resolver: null, phone: enrollPhone });
-      return;
-    }
+  const continueAfterLogin = async () => {
     goDashboard();
   };
 
@@ -85,7 +71,7 @@ export default function SignInBoxed() {
         });
       }
 
-      await continueAfterFirstFactor(user);
+      await continueAfterLogin();
     } catch (error) {
       if (isMfaRequiredError(error)) {
         setMfa({ open: true, mode: "challenge", user: null, resolver: getMfaResolver(error) });
@@ -129,7 +115,7 @@ export default function SignInBoxed() {
         });
       }
 
-      await continueAfterFirstFactor(user);
+      await continueAfterLogin();
     } catch (error) {
       if (isMfaRequiredError(error)) {
         setMfa({ open: true, mode: "challenge", user: null, resolver: getMfaResolver(error) });
@@ -153,11 +139,16 @@ export default function SignInBoxed() {
         user={mfa.user}
         resolver={mfa.resolver}
         initialPhone={mfa.phone}
+        skippable={mfa.mode !== "challenge"}
         onComplete={async (user, enrolledPhone) => {
           const phone = toE164(enrolledPhone || mfa.phone);
           if (user?.uid && phone) {
             await setDoc(doc(db, "users", user.uid), { phone }, { merge: true });
           }
+          setMfa({ open: false, mode: "enroll", user: null, resolver: null });
+          goDashboard();
+        }}
+        onSkip={() => {
           setMfa({ open: false, mode: "enroll", user: null, resolver: null });
           goDashboard();
         }}
